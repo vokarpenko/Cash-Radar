@@ -1,0 +1,12 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+**/config/local*.json
+supabase/.temp/
+supabase/.branches/
+
+# Editor and operating system files
+.DS_Store
+.idea/
+*.iml
