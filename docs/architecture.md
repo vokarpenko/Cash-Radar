@@ -1,6 +1,6 @@
 # CashRadar: архитектура
 
-Статус: этап 1 завершён, 11.11.2026. Источник требований — [мастер-ТЗ](cash_radar_brd.md). Владелец создал облачный проект; миграция применена и подключение к облачной БД проверено Flutter-клиентом. Подробности — в [инструкции по настройке](setup.md).
+Статус: этап 2, 11.11.2026. Источник требований — [мастер-ТЗ](cash_radar_brd.md). Облачный проект и локальный Supabase настроены, подключение и базовая авторизация проверены. Подробности — в [инструкции по настройке](setup.md).
 
 ## Назначение и границы
 
@@ -58,4 +58,4 @@ Cash-Radar/
 
 Источники: [тарифы Supabase](https://supabase.com/pricing), [правила биллинга и квот](https://supabase.com/docs/guides/platform/billing-on-supabase), [приостановка Free-проектов](https://supabase.com/docs/guides/platform/free-project-pausing), [лимиты Edge Functions](https://supabase.com/docs/guides/functions/limits), [локальная разработка](https://supabase.com/docs/guides/local-development).
 
-Хостинг Flutter Web пока не выбран: публикация не входит в этап 1. Перед выбором сравнить действующие бесплатные лимиты, HTTPS, домен и способ развёртывания. Не включать платные услуги без согласия владельца.
+Для статического Flutter Web по обновлённому ТЗ выбраны Cloudflare Pages с публикацией из Git на этапе 4; Cloudflare Functions и Workers не используются как backend. По состоянию на 11.11.2026 Free-план указывает 500 сборок в месяц, одну одновременную сборку и до 20 000 файлов на сайт; запросы к статическим ресурсам бесплатны. Условия и размер сборки нужно повторно проверить перед публикацией: [лимиты Cloudflare Pages](https://developers.cloudflare.com/pages/platform/limits/), [статические запросы](https://developers.cloudflare.com/pages/functions/pricing/). Не включать платные услуги без согласия владельца.
