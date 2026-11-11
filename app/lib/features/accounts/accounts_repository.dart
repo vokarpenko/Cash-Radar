@@ -12,6 +12,7 @@ class AccountSummary {
     this.initialBalance = '0',
     this.currentBalance = '0',
     this.isActive = true,
+    this.hasTransactions = false,
   });
   final String id;
   final String name;
@@ -22,6 +23,7 @@ class AccountSummary {
   final String initialBalance;
   final String currentBalance;
   final bool isActive;
+  final bool hasTransactions;
 
   factory AccountSummary.fromJson(Map<String, dynamic> json) => AccountSummary(
     id: json['id'] as String,
@@ -33,6 +35,7 @@ class AccountSummary {
     initialBalance: json['initial_balance'] as String,
     currentBalance: json['current_balance'] as String,
     isActive: json['is_active'] as bool,
+    hasTransactions: json['has_transactions'] as bool? ?? false,
   );
 }
 

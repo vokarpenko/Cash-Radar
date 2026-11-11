@@ -4,6 +4,7 @@ import 'package:cash_radar/app/app_shell.dart';
 import 'package:cash_radar/features/accounts/accounts_repository.dart';
 import 'package:cash_radar/features/auth/auth_screen.dart';
 import 'package:cash_radar/main.dart';
+import 'package:cash_radar/features/transactions/transactions_repository.dart';
 import 'package:cash_radar/features/settings/currency_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,6 +43,19 @@ class FakeCurrency implements CurrencyRepository {
   }
 }
 
+class EmptyTransactions implements TransactionsRepository {
+  @override
+  Future<List<TransactionEntry>> loadTransactions() async => [];
+  @override
+  Future<List<TransactionCategory>> loadCategories() async => [];
+  @override
+  Future<void> createTransaction(TransactionInput input) async {}
+  @override
+  Future<void> updateTransaction(String id, TransactionInput input) async {}
+  @override
+  Future<void> deleteTransaction(String id) async {}
+}
+
 void main() {
   late FakeAuth auth;
   late ControlledAccounts accounts;
@@ -55,6 +69,7 @@ void main() {
     overrides: [
       accountsRepositoryProvider.overrideWithValue(accounts),
       currencyRepositoryProvider.overrideWithValue(FakeCurrency()),
+      transactionsRepositoryProvider.overrideWithValue(EmptyTransactions()),
     ],
     child: CashRadarApp(auth: auth),
   );

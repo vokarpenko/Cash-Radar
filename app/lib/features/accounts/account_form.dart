@@ -180,13 +180,18 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                   initialValue: supportedCurrencies.contains(_currency)
                       ? _currency
                       : null,
-                  decoration: const InputDecoration(labelText: 'Валюта'),
+                  decoration: InputDecoration(
+                    labelText: 'Валюта',
+                    helperText: widget.account?.hasTransactions == true
+                        ? 'Нельзя менять валюту счёта с операциями.'
+                        : null,
+                  ),
                   items: [
                     for (final currency in supportedCurrencies)
                       DropdownMenuItem(value: currency, child: Text(currency)),
                   ],
                   validator: (v) => v == null ? 'Выберите валюту' : null,
-                  onChanged: _saving
+                  onChanged: _saving || widget.account?.hasTransactions == true
                       ? null
                       : (v) => setState(() => _currency = v!),
                 ),

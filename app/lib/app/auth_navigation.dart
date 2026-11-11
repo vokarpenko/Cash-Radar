@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/accounts/accounts_repository.dart';
 import '../features/auth/auth_service.dart';
 import '../features/settings/currency_repository.dart';
+import '../features/transactions/transactions_repository.dart';
 
 final authServiceProvider = Provider<AuthService>(
   (ref) => throw StateError('AuthService is not configured'),
@@ -76,6 +77,8 @@ final authNavigationProvider = Provider<AuthNavigation>(
       onIdentityChanged: () {
         ref.invalidate(accountsProvider);
         ref.invalidate(baseCurrencyProvider);
+        ref.invalidate(transactionsProvider);
+        ref.invalidate(transactionCategoriesProvider);
       },
     );
     ref.onDispose(controller.dispose);
@@ -86,5 +89,7 @@ final authNavigationProvider = Provider<AuthNavigation>(
     initialRecoveryProvider,
     accountsProvider,
     baseCurrencyProvider,
+    transactionsProvider,
+    transactionCategoriesProvider,
   ],
 );
