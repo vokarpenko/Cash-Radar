@@ -125,7 +125,7 @@ void main() {
       );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Сумма по счёту (AMD)'),
-        '5000.0001',
+        '5000.01',
       );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Описание (необязательно)'),
@@ -135,10 +135,10 @@ void main() {
       await tester.tap(find.text('Сохранить'));
       await tester.pumpAndSettle();
       expect(repository.lastInput!.amount, '12.34');
-      expect(repository.lastInput!.accountAmount, '5000.0001');
+      expect(repository.lastInput!.accountAmount, '5000.01');
       expect(find.text('Завтрак'), findsOneWidget);
       expect(find.text('−12.34 EUR'), findsOneWidget);
-      expect(find.text('По счёту: −5000.0001 AMD'), findsOneWidget);
+      expect(find.text('По счёту: −5000.01 AMD'), findsOneWidget);
       await tester.tap(find.text('Изменить'));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -187,14 +187,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Сумма операции'),
-      '12.0001',
+      '12.01',
     );
     await tester.ensureVisible(find.text('Сохранить'));
     await tester.tap(find.text('Сохранить'));
     await tester.pumpAndSettle();
     expect(repository.lastInput!.type, 'income');
-    expect(repository.lastInput!.accountAmount, '12.0001');
-    expect(find.text('+12.0001 AMD'), findsOneWidget);
+    expect(repository.lastInput!.accountAmount, '12.01');
+    expect(find.text('+12.01 AMD'), findsOneWidget);
   });
 
   testWidgets('operation form fits a narrow screen', (tester) async {
@@ -213,12 +213,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Сумма операции'),
-      '999999999999999999.9999',
+      '999999999999999999.99',
     );
     await tester.ensureVisible(find.text('Сохранить'));
     await tester.tap(find.text('Сохранить'));
     await tester.pumpAndSettle();
-    expect(repository.lastInput!.amount, '999999999999999999.9999');
+    expect(repository.lastInput!.amount, '999999999999999999.99');
     expect(tester.takeException(), isNull);
   });
 
@@ -272,6 +272,37 @@ void main() {
     expect(find.text('Выплата'), findsNothing);
   });
 
+  testWidgets('edits a stored operation with insignificant trailing zeros', (
+    tester,
+  ) async {
+    repository.entries.add(
+      repository.entry(
+        'legacy',
+        const TransactionInput(
+          accountId: 'a1',
+          categoryId: 'food',
+          type: 'expense',
+          date: '2026-11-10',
+          amount: '12.3400',
+          currency: 'AMD',
+          accountAmount: '12.3400',
+          accountCurrency: 'AMD',
+          description: 'Ранее сохранено',
+        ),
+      ),
+    );
+    await open(tester);
+    expect(find.text('−12.34 AMD'), findsOneWidget);
+    await tester.tap(find.text('Изменить'));
+    await tester.pumpAndSettle();
+    expect(find.text('12.34'), findsOneWidget);
+    await tester.ensureVisible(find.text('Сохранить'));
+    await tester.tap(find.text('Сохранить'));
+    await tester.pumpAndSettle();
+    expect(repository.lastInput!.amount, '12.34');
+    expect(repository.lastInput!.accountAmount, '12.34');
+  });
+
   testWidgets('rejects zero and invalid precision', (tester) async {
     await open(tester);
     await tester.tap(find.text('Добавить операцию'));
@@ -286,7 +317,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Сумма операции'),
-      '0.00001',
+      '0.001',
     );
     await tester.ensureVisible(find.text('Сохранить'));
     await tester.tap(find.text('Сохранить'));

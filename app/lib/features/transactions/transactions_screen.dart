@@ -314,9 +314,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   Widget _card(TransactionEntry item) {
-    final amount = Money.tryParse(item.amount)?.display ?? item.amount;
-    final accountAmount =
-        Money.tryParse(item.accountAmount)?.display ?? item.accountAmount;
+    final amount = Money.displayStored(item.amount);
+    final accountAmount = Money.displayStored(item.accountAmount);
     final sign = item.type == 'income' ? '+' : '−';
     return Card(
       child: Padding(

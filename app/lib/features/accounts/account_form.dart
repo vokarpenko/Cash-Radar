@@ -31,7 +31,9 @@ class _AccountFormState extends ConsumerState<AccountForm> {
     super.initState();
     final a = widget.account;
     _name = TextEditingController(text: a?.name ?? '');
-    _balance = TextEditingController(text: a?.initialBalance ?? '0');
+    _balance = TextEditingController(
+      text: a == null ? '0' : Money.displayStored(a.initialBalance),
+    );
     _type = a?.type ?? 'bank';
     _currency = a?.currency ?? 'AMD';
     _bankId = a?.bankId;
@@ -206,10 +208,10 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                   decoration: const InputDecoration(
                     labelText: 'Начальный баланс',
                     helperText:
-                        'До 4 знаков после запятой; можно указать минус.',
+                        'До 2 знаков после запятой; можно указать минус.',
                   ),
                   validator: (v) => Money.tryParse(v ?? '') == null
-                      ? 'Введите сумму до 18 цифр и 4 знаков после запятой'
+                      ? 'Введите сумму до 18 цифр и 2 знаков после запятой'
                       : null,
                 ),
                 if (_error != null)

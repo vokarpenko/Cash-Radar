@@ -126,19 +126,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Начальный баланс'),
-        '1,00001',
+        '1,001',
       );
       await tester.tap(find.text('Сохранить'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Введите сумму'), findsOneWidget);
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Начальный баланс'),
-        '999999999999999999,9999',
+        '999999999999999999,99',
       );
       await tester.tap(find.text('Сохранить'));
       await tester.pumpAndSettle();
-      expect(accounts.lastInput!.initialBalance, '999999999999999999.9999');
-      expect(find.text('999999999999999999.9999 AMD'), findsOneWidget);
+      expect(accounts.lastInput!.initialBalance, '999999999999999999.99');
+      expect(find.text('999999999999999999.99 AMD'), findsOneWidget);
       await tester.tap(find.text('Изменить'));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -147,12 +147,12 @@ void main() {
       );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Начальный баланс'),
-        '-0.0001',
+        '-0.01',
       );
       await tester.tap(find.text('Сохранить'));
       await tester.pumpAndSettle();
       expect(find.text('Новая карта'), findsOneWidget);
-      expect(find.text('-0.0001 AMD'), findsOneWidget);
+      expect(find.text('-0.01 AMD'), findsOneWidget);
       await tester.tap(find.text('В архив'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Архивировать'));
@@ -180,6 +180,29 @@ void main() {
     expect(find.text('Новый счёт'), findsNothing);
   });
 
+  testWidgets('edits a stored balance with insignificant trailing zeros', (
+    tester,
+  ) async {
+    accounts.items.add(
+      const AccountSummary(
+        id: 'legacy',
+        name: 'Кошелёк',
+        type: 'cash',
+        currency: 'AMD',
+        initialBalance: '12.3400',
+        currentBalance: '12.3400',
+      ),
+    );
+    await openAccounts(tester);
+    expect(find.text('12.34 AMD'), findsOneWidget);
+    await tester.tap(find.text('Изменить'));
+    await tester.pumpAndSettle();
+    expect(find.text('12.34'), findsOneWidget);
+    await tester.tap(find.text('Сохранить'));
+    await tester.pumpAndSettle();
+    expect(accounts.lastInput!.initialBalance, '12.34');
+  });
+
   testWidgets('long names and balances fit a narrow screen', (tester) async {
     await openAccounts(tester);
     await accounts.createAccount(
@@ -187,7 +210,7 @@ void main() {
         name: 'Счёт с очень длинным названием для проверки ширины экрана',
         type: 'cash',
         currency: 'AMD',
-        initialBalance: '999999999999999999.9999',
+        initialBalance: '999999999999999999.99',
       ),
     );
     tester.view.physicalSize = const Size(390, 800);
@@ -196,7 +219,7 @@ void main() {
     await tester.pumpAndSettle();
     router.go('/accounts');
     await tester.pumpAndSettle();
-    expect(find.text('999999999999999999.9999 AMD'), findsOneWidget);
+    expect(find.text('999999999999999999.99 AMD'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

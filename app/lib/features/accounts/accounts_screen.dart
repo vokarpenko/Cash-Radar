@@ -141,9 +141,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                     'cash' => 'Наличные',
                     _ => 'Кошелёк',
                   };
-                  final balance =
-                      Money.tryParse(account.currentBalance)?.display ??
-                      account.currentBalance;
+                  final balance = Money.displayStored(account.currentBalance);
                   return Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),

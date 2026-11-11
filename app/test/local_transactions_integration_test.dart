@@ -43,7 +43,7 @@ void main() {
               'name': 'A wallet',
               'account_type': 'cash',
               'currency': 'AMD',
-              'initial_balance': '1000.0000',
+              'initial_balance': '1000.00',
             })
             .select('id')
             .single();
@@ -87,9 +87,9 @@ void main() {
           categoryId: categoryAIncome,
           type: 'income',
           date: '2026-11-11',
-          amount: '2.0001',
+          amount: '2.01',
           currency: 'AMD',
-          accountAmount: '2.0001',
+          accountAmount: '2.01',
           accountCurrency: 'AMD',
           description: 'Salary',
         );
@@ -97,7 +97,7 @@ void main() {
         var balance = (await SupabaseAccountsRepository(
           a,
         ).loadAccounts()).single;
-        expect(balance.currentBalance, '1002.0001');
+        expect(balance.currentBalance, '1002.01');
         expect(balance.hasTransactions, isTrue);
         await repo.createTransaction(
           TransactionInput(
@@ -107,7 +107,7 @@ void main() {
             date: '2026-11-10',
             amount: '1.25',
             currency: 'EUR',
-            accountAmount: '500.0001',
+            accountAmount: '500.01',
             accountCurrency: 'AMD',
             description: 'Purchase',
           ),
@@ -116,12 +116,12 @@ void main() {
         expect(txs, hasLength(2));
         final expense = txs.singleWhere((t) => t.type == 'expense');
         expect(expense.amount, '1.25');
-        expect(expense.accountAmount, '500.0001');
+        expect(expense.accountAmount, '500.01');
         expect(
           (await SupabaseAccountsRepository(
             a,
           ).loadAccounts()).single.currentBalance,
-          '502.0000',
+          '502.00',
         );
         await repo.updateTransaction(
           expense.id,
@@ -132,7 +132,7 @@ void main() {
             date: '2026-11-09',
             amount: '1.25',
             currency: 'EUR',
-            accountAmount: '400.0000',
+            accountAmount: '400.00',
             accountCurrency: 'AMD',
             description: 'Edited',
           ),
@@ -141,7 +141,7 @@ void main() {
           (await SupabaseAccountsRepository(
             a,
           ).loadAccounts()).single.currentBalance,
-          '602.0001',
+          '602.01',
         );
         expect(
           await b.from('transaction_details').select('id').eq('id', expense.id),
@@ -210,7 +210,7 @@ void main() {
           }),
           throwsA(isA<PostgrestException>()),
         );
-        for (final invalid in ['0', '-1', '0.00001', '1000000000000000000']) {
+        for (final invalid in ['0', '-1', '0.001', '1000000000000000000']) {
           await expectLater(
             a.from('transactions').insert({
               ...income.toJson(),
@@ -220,6 +220,14 @@ void main() {
             throwsA(isA<PostgrestException>()),
           );
         }
+        await expectLater(
+          a.from('transactions').insert({
+            ...income.toJson(),
+            'currency': 'EUR',
+            'account_amount': '1.001',
+          }),
+          throwsA(isA<PostgrestException>()),
+        );
         await expectLater(
           a.from('transactions').insert({
             ...income.toJson(),
@@ -254,12 +262,12 @@ void main() {
           (await SupabaseAccountsRepository(
             a,
           ).loadAccounts()).single.currentBalance,
-          '1002.0001',
+          '1002.01',
         );
         txs = await repo.loadTransactions();
         await repo.deleteTransaction(txs.single.id);
         balance = (await SupabaseAccountsRepository(a).loadAccounts()).single;
-        expect(balance.currentBalance, '1000.0000');
+        expect(balance.currentBalance, '1000.00');
         expect(balance.hasTransactions, isFalse);
         await a
             .from('accounts')
@@ -271,7 +279,7 @@ void main() {
               'name': 'Big',
               'account_type': 'cash',
               'currency': 'AMD',
-              'initial_balance': '999999999999999999.9999',
+              'initial_balance': '999999999999999999.99',
             })
             .select('id')
             .single();
@@ -281,9 +289,9 @@ void main() {
             categoryId: categoryAIncome,
             type: 'income',
             date: '2026-11-11',
-            amount: '0.0001',
+            amount: '0.01',
             currency: 'AMD',
-            accountAmount: '0.0001',
+            accountAmount: '0.01',
             accountCurrency: 'AMD',
           ),
         );
@@ -291,7 +299,7 @@ void main() {
           (await SupabaseAccountsRepository(a).loadAccounts())
               .singleWhere((x) => x.id == large['id'])
               .currentBalance,
-          '1000000000000000000.0000',
+          '1000000000000000000.00',
         );
       } finally {
         await a.dispose();

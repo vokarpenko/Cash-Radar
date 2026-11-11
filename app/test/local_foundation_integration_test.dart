@@ -94,14 +94,14 @@ void main() {
             name: 'Exact wallet',
             type: 'cash',
             currency: 'USD',
-            initialBalance: '999999999999999999.9999',
+            initialBalance: '999999999999999999.99',
           ),
         );
         var exact = (await repoA.loadAccounts()).singleWhere(
           (a) => a.name == 'Exact wallet',
         );
-        expect(exact.initialBalance, '999999999999999999.9999');
-        expect(exact.currentBalance, '999999999999999999.9999');
+        expect(exact.initialBalance, '999999999999999999.99');
+        expect(exact.currentBalance, '999999999999999999.99');
         expect(
           await clientB
               .from('account_balances')
@@ -119,14 +119,14 @@ void main() {
             name: 'Edited wallet',
             type: 'cash',
             currency: 'EUR',
-            initialBalance: '-0.0001',
+            initialBalance: '-0.01',
           ),
         );
         exact = (await repoA.loadAccounts()).singleWhere(
           (a) => a.id == exact.id,
         );
         expect(exact.name, 'Edited wallet');
-        expect(exact.currentBalance, '-0.0001');
+        expect(exact.currentBalance, '-0.01');
         expect(exact.currency, 'EUR');
         await repoA.setActive(exact.id, false);
         expect(
@@ -227,7 +227,7 @@ void main() {
             'name': 'Too precise',
             'account_type': 'cash',
             'currency': 'AMD',
-            'initial_balance': '0.00001',
+            'initial_balance': '0.001',
           }),
           throwsA(isA<PostgrestException>()),
         );

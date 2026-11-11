@@ -14,7 +14,7 @@ String? _validateAmount(String? value) {
   if (amount == null ||
       amount.value.startsWith('-') ||
       RegExp(r'^0(?:\.0+)?$').hasMatch(amount.value)) {
-    return 'Введите положительную сумму: до 18 цифр и 4 знаков после запятой';
+    return 'Введите положительную сумму: до 18 цифр и 2 знаков после запятой';
   }
   return null;
 }
@@ -45,8 +45,12 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
     _accountId = item?.accountId;
     _categoryId = item?.categoryId;
     _currency = item?.currency;
-    _amount = TextEditingController(text: item?.amount ?? '');
-    _accountAmount = TextEditingController(text: item?.accountAmount ?? '');
+    _amount = TextEditingController(
+      text: item == null ? '' : Money.displayStored(item.amount),
+    );
+    _accountAmount = TextEditingController(
+      text: item == null ? '' : Money.displayStored(item.accountAmount),
+    );
     _description = TextEditingController(text: item?.description ?? '');
     _navigation = ref.read(authNavigationProvider);
     _userId = _navigation.userId;
@@ -279,7 +283,7 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                   decoration: const InputDecoration(
                     labelText: 'Сумма операции',
                     helperText:
-                        'Положительная сумма, до 4 знаков после запятой.',
+                        'Положительная сумма, до 2 знаков после запятой.',
                   ),
                   validator: _validateAmount,
                 ),
