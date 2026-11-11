@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'app/auth_navigation.dart';
+import 'app/cash_radar_app.dart';
 import 'config/app_config.dart';
-import 'features/auth/auth_gate.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/secure_session_storage.dart';
 import 'health/health_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (kIsWeb) usePathUrlStrategy();
   final config = AppConfig.fromEnvironment();
   var configurationError = config.validationError;
   HealthCheck? check;
@@ -60,11 +64,24 @@ class CashRadarApp extends StatelessWidget {
   final bool initialRecovery;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'CashRadar',
-    theme: ThemeData(colorSchemeSeed: Colors.teal),
-    home: auth == null
-        ? HealthScreen(check: check, configurationError: configurationError)
-        : AuthGate(auth: auth!, initialRecovery: initialRecovery),
-  );
+  Widget build(BuildContext context) {
+    final service = auth;
+    if (service == null) {
+      return MaterialApp(
+        title: 'CashRadar',
+        theme: ThemeData(colorSchemeSeed: Colors.teal),
+        home: HealthScreen(
+          check: check,
+          configurationError: configurationError,
+        ),
+      );
+    }
+    return ProviderScope(
+      overrides: [
+        authServiceProvider.overrideWithValue(service),
+        initialRecoveryProvider.overrideWithValue(initialRecovery),
+      ],
+      child: const CashRadarRouterApp(),
+    );
+  }
 }

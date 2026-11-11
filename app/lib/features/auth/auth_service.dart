@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Isolates UI code from the authentication provider.
 abstract interface class AuthService {
   bool get hasSession;
+  String? get userId;
   Stream<AuthState> get changes;
   Future<bool> signUp(String email, String password);
   Future<void> signIn(String email, String password);
@@ -27,6 +28,9 @@ class SupabaseAuthService implements AuthService {
   bool get hasSession =>
       _client.auth.currentSession != null &&
       !_client.auth.currentSession!.isExpired;
+
+  @override
+  String? get userId => hasSession ? _client.auth.currentUser?.id : null;
 
   @override
   Stream<AuthState> get changes => _client.auth.onAuthStateChange;

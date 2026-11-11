@@ -1,3 +1,4 @@
+import 'package:cash_radar/features/accounts/accounts_repository.dart';
 import 'package:cash_radar/features/auth/auth_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -87,6 +88,36 @@ void main() {
             .single();
         expect(accountA['user_id'], userA);
         expect(accountB['user_id'], userB);
+        final bank = await clientA
+            .from('banks')
+            .select('id, name')
+            .eq('code', 'ameria_am')
+            .single();
+        await clientA.from('accounts').insert({
+          'name': 'Ameria card',
+          'account_type': 'bank',
+          'bank_id': bank['id'],
+          'currency': 'AMD',
+        });
+        await clientA.from('accounts').insert({
+          'name': 'Archived wallet',
+          'account_type': 'cash',
+          'currency': 'EUR',
+          'is_active': false,
+        });
+        final visibleAccounts = await SupabaseAccountsRepository(
+          clientA,
+        ).loadAccounts();
+        expect(visibleAccounts.map((account) => account.name).toSet(), {
+          'Wallet A',
+          'Ameria card',
+        });
+        expect(
+          visibleAccounts
+              .singleWhere((account) => account.name == 'Ameria card')
+              .bankName,
+          bank['name'],
+        );
         expect(
           await clientA.from('accounts').select('id').eq('id', accountB['id']),
           isEmpty,

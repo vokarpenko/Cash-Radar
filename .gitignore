@@ -5,6 +5,7 @@
 **/config/local*.json
 supabase/.temp/
 supabase/.branches/
+.wrangler/
 
 # Editor and operating system files
 .DS_Store

@@ -1,60 +1,8 @@
-import 'dart:async';
-
-import 'package:cash_radar/features/auth/auth_service.dart';
 import 'package:cash_radar/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-class FakeAuth implements AuthService {
-  final controller = StreamController<AuthState>.broadcast(sync: true);
-  final Session session = Session(
-    accessToken: 'test-token',
-    tokenType: 'bearer',
-    user: const User(
-      id: 'test-user',
-      appMetadata: {},
-      userMetadata: {},
-      aud: 'authenticated',
-      createdAt: '',
-    ),
-  );
-  bool active = false;
-  String? requestedEmail;
-  String? passwordValue;
-
-  @override
-  bool get hasSession => active;
-  @override
-  Stream<AuthState> get changes => controller.stream;
-
-  @override
-  Future<bool> signUp(String email, String password) async {
-    requestedEmail = email;
-    passwordValue = password;
-    return false;
-  }
-
-  @override
-  Future<void> signIn(String email, String password) async {
-    requestedEmail = email;
-    active = true;
-    controller.add(AuthState(AuthChangeEvent.signedIn, session));
-  }
-
-  @override
-  Future<void> signOut() async {
-    active = false;
-    controller.add(const AuthState(AuthChangeEvent.signedOut, null));
-  }
-
-  @override
-  Future<void> resetPassword(String email) async => requestedEmail = email;
-
-  @override
-  Future<void> updatePassword(String password) async =>
-      passwordValue = password;
-}
+import 'support/fake_auth.dart';
 
 void main() {
   late FakeAuth auth;
@@ -88,14 +36,16 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(CashRadarApp(auth: auth));
-    expect(find.text('Вы вошли в CashRadar.'), findsNothing);
+    expect(find.text('Добро пожаловать в CashRadar'), findsNothing);
     await enterCredentials(tester);
     await tester.tap(find.text('Войти'));
     await tester.pumpAndSettle();
-    expect(find.text('Вы вошли в CashRadar.'), findsOneWidget);
+    expect(find.text('Добро пожаловать в CashRadar'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Выйти'));
     await tester.pumpAndSettle();
-    expect(find.text('Вы вошли в CashRadar.'), findsNothing);
+    expect(find.text('Добро пожаловать в CashRadar'), findsNothing);
     expect(find.text('Войти'), findsOneWidget);
   });
 
@@ -121,7 +71,7 @@ void main() {
     await tester.tap(find.text('Сохранить пароль'));
     await tester.pumpAndSettle();
     expect(auth.passwordValue, 'newpassword123');
-    expect(find.text('Вы вошли в CashRadar.'), findsOneWidget);
+    expect(find.text('Добро пожаловать в CashRadar'), findsOneWidget);
   });
 
   testWidgets('rejects a short registration password', (tester) async {
