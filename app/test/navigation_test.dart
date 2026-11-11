@@ -4,6 +4,7 @@ import 'package:cash_radar/app/app_shell.dart';
 import 'package:cash_radar/features/accounts/accounts_repository.dart';
 import 'package:cash_radar/features/auth/auth_screen.dart';
 import 'package:cash_radar/main.dart';
+import 'package:cash_radar/features/settings/currency_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,10 +15,30 @@ import 'support/fake_auth.dart';
 class ControlledAccounts implements AccountsRepository {
   final requests = <Completer<List<AccountSummary>>>[];
   @override
+  Future<List<Bank>> loadBanks() async => [
+    const Bank(id: 'b1', name: 'Ameria Bank'),
+  ];
+  @override
+  Future<void> createAccount(AccountInput input) async {}
+  @override
+  Future<void> updateAccount(String id, AccountInput input) async {}
+  @override
+  Future<void> setActive(String id, bool active) async {}
+  @override
   Future<List<AccountSummary>> loadAccounts() {
     final request = Completer<List<AccountSummary>>();
     requests.add(request);
     return request.future;
+  }
+}
+
+class FakeCurrency implements CurrencyRepository {
+  String value = 'AMD';
+  @override
+  Future<String> loadBaseCurrency() async => value;
+  @override
+  Future<void> saveBaseCurrency(String currency) async {
+    value = currency;
   }
 }
 
@@ -31,7 +52,10 @@ void main() {
   tearDown(() => auth.controller.close());
 
   Widget app() => ProviderScope(
-    overrides: [accountsRepositoryProvider.overrideWithValue(accounts)],
+    overrides: [
+      accountsRepositoryProvider.overrideWithValue(accounts),
+      currencyRepositoryProvider.overrideWithValue(FakeCurrency()),
+    ],
     child: CashRadarApp(auth: auth),
   );
 
@@ -122,7 +146,7 @@ void main() {
     ]);
     await tester.pumpAndSettle();
     expect(find.text('Мой кошелёк'), findsOneWidget);
-    expect(find.text('AMD'), findsOneWidget);
+    expect(find.text('0.00 AMD'), findsOneWidget);
   });
 
   testWidgets('accounts show an empty state', (tester) async {

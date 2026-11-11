@@ -1,5 +1,6 @@
 import 'package:cash_radar/features/accounts/accounts_repository.dart';
 import 'package:cash_radar/features/auth/auth_service.dart';
+import 'package:cash_radar/features/settings/currency_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -66,6 +67,82 @@ void main() {
         expect(categoriesA.every((row) => row['user_id'] == userA), isTrue);
         expect(categoriesB.every((row) => row['user_id'] == userB), isTrue);
 
+        final currencyA = SupabaseCurrencyRepository(clientA);
+        final currencyB = SupabaseCurrencyRepository(clientB);
+        expect(await currencyA.loadBaseCurrency(), 'AMD');
+        await currencyA.saveBaseCurrency('EUR');
+        expect(await currencyA.loadBaseCurrency(), 'EUR');
+        expect(await currencyB.loadBaseCurrency(), 'AMD');
+        expect(
+          await clientB
+              .from('profiles')
+              .update({'base_currency': 'RUB'})
+              .eq('id', userA)
+              .select('id'),
+          isEmpty,
+        );
+        await expectLater(
+          clientA
+              .from('profiles')
+              .update({'base_currency': 'invalid'})
+              .eq('id', userA),
+          throwsA(isA<PostgrestException>()),
+        );
+        final repoA = SupabaseAccountsRepository(clientA);
+        await repoA.createAccount(
+          const AccountInput(
+            name: 'Exact wallet',
+            type: 'cash',
+            currency: 'USD',
+            initialBalance: '999999999999999999.9999',
+          ),
+        );
+        var exact = (await repoA.loadAccounts()).singleWhere(
+          (a) => a.name == 'Exact wallet',
+        );
+        expect(exact.initialBalance, '999999999999999999.9999');
+        expect(exact.currentBalance, '999999999999999999.9999');
+        expect(
+          await clientB
+              .from('account_balances')
+              .select('id')
+              .eq('id', exact.id),
+          isEmpty,
+        );
+        await expectLater(
+          SupabaseAccountsRepository(clientB).setActive(exact.id, false),
+          throwsA(anything),
+        );
+        await repoA.updateAccount(
+          exact.id,
+          const AccountInput(
+            name: 'Edited wallet',
+            type: 'cash',
+            currency: 'EUR',
+            initialBalance: '-0.0001',
+          ),
+        );
+        exact = (await repoA.loadAccounts()).singleWhere(
+          (a) => a.id == exact.id,
+        );
+        expect(exact.name, 'Edited wallet');
+        expect(exact.currentBalance, '-0.0001');
+        expect(exact.currency, 'EUR');
+        await repoA.setActive(exact.id, false);
+        expect(
+          (await repoA.loadAccounts())
+              .singleWhere((a) => a.id == exact.id)
+              .isActive,
+          isFalse,
+        );
+        await repoA.setActive(exact.id, true);
+        expect(
+          (await repoA.loadAccounts())
+              .singleWhere((a) => a.id == exact.id)
+              .isActive,
+          isTrue,
+        );
+
         final accountA = await clientA
             .from('accounts')
             .insert({
@@ -111,6 +188,8 @@ void main() {
         expect(visibleAccounts.map((account) => account.name).toSet(), {
           'Wallet A',
           'Ameria card',
+          'Archived wallet',
+          'Edited wallet',
         });
         expect(
           visibleAccounts
@@ -190,6 +269,10 @@ void main() {
           );
           await expectLater(
             anonymous.from('accounts').select(),
+            throwsA(isA<PostgrestException>()),
+          );
+          await expectLater(
+            anonymous.from('account_balances').select(),
             throwsA(isA<PostgrestException>()),
           );
           await expectLater(
