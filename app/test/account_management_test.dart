@@ -128,9 +128,15 @@ void main() {
         find.widgetWithText(TextFormField, 'Начальный баланс'),
         '1,001',
       );
-      await tester.tap(find.text('Сохранить'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Введите сумму'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Начальный баланс'),
+            )
+            .controller!
+            .text,
+        '0',
+      );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Начальный баланс'),
         '999999999999999999,99',

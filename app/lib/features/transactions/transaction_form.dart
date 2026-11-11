@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/auth_navigation.dart';
 import '../accounts/accounts_repository.dart';
 import '../accounts/money.dart';
+import '../accounts/money_input_formatter.dart';
 import 'transactions_repository.dart';
 
 String _isoDate(DateTime value) =>
@@ -276,7 +276,7 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                 TextFormField(
                   controller: _amount,
                   enabled: !_saving,
-                  inputFormatters: [LengthLimitingTextInputFormatter(24)],
+                  inputFormatters: [MoneyInputFormatter()],
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
@@ -293,7 +293,7 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                   TextFormField(
                     controller: _accountAmount,
                     enabled: !_saving,
-                    inputFormatters: [LengthLimitingTextInputFormatter(24)],
+                    inputFormatters: [MoneyInputFormatter()],
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),

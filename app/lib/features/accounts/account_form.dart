@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/auth_navigation.dart';
 import 'accounts_repository.dart';
 import 'money.dart';
+import 'money_input_formatter.dart';
 
 class AccountForm extends ConsumerStatefulWidget {
   const AccountForm({super.key, this.account});
@@ -204,7 +204,7 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                     decimal: true,
                     signed: true,
                   ),
-                  inputFormatters: [LengthLimitingTextInputFormatter(25)],
+                  inputFormatters: [MoneyInputFormatter(allowNegative: true)],
                   decoration: const InputDecoration(
                     labelText: 'Начальный баланс',
                     helperText:
