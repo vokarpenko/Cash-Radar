@@ -45,7 +45,7 @@ class TestPicker implements StatementFilePicker {
 }
 
 class MemoryImports implements ImportsRepository {
-  String status = 'ready';
+  String status = 'ready', format = 'cashradar_csv_v1';
   bool prepared = false, duplicate = false;
   int confirms = 0, cancellations = 0;
   String? submittedOwner, submittedAccount;
@@ -62,7 +62,7 @@ class MemoryImports implements ImportsRepository {
         ? [const ImportIssue(row: 2, message: 'Ошибка суммы.')]
         : [],
     createdAt: '2026-11-12T00:00:00Z',
-    format: 'cashradar_csv_v1',
+    format: format,
   );
   @override
   Future<List<ImportBatch>> loadBatches() async => prepared ? [batch] : [];
@@ -190,6 +190,12 @@ void main() {
     expect(imports.confirms, 1);
     expect(find.textContaining('Импортирован · формат'), findsOneWidget);
     expect(find.text('Подтвердить импорт'), findsNothing);
+  });
+  testWidgets('labels Ameria XLSX in the preview', (tester) async {
+    imports.format = 'ameria_xlsx_v1';
+    await open(tester);
+    await prepare(tester);
+    expect(find.textContaining('формат: Ameria XLSX'), findsOneWidget);
   });
   testWidgets('shows invalid rows and prevents partial confirmation', (
     tester,

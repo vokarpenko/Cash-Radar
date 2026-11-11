@@ -1,3 +1,4 @@
+import { parseAmeriaXlsx } from "./ameria.ts";
 import {
   type Category,
   detectFormat,
@@ -145,16 +146,10 @@ Deno.serve(async (req: Request) => {
         "PDF распознан; поддержка банковских PDF-выписок появится на следующем этапе.",
       );
     }
-    if (format === "xlsx") {
+    if (format !== "csv" && format !== "xlsx") {
       throw new HttpError(
         422,
-        "XLSX/ZIP распознан; банковские XLSX-выписки будут добавлены на следующих этапах.",
-      );
-    }
-    if (format !== "csv") {
-      throw new HttpError(
-        422,
-        "Формат не распознан. Сейчас поддерживается CashRadar CSV с установленными заголовками.",
+        "Формат не распознан. Поддерживаются CashRadar CSV и Ameria XLSX.",
       );
     }
     const headers = { apikey: service, Authorization: `Bearer ${service}` };
@@ -175,6 +170,25 @@ Deno.serve(async (req: Request) => {
       !accounts[0].is_active
     ) throw new HttpError(400, "Активный счёт не найден.");
     const account = accounts[0];
+    if (format === "xlsx") {
+      const bankUrl = new URL(`${url}/rest/v1/banks`);
+      bankUrl.search = new URLSearchParams({
+        select: "id",
+        code: "eq.ameria_am",
+        limit: "1",
+      }).toString();
+      const bankResponse = await fetch(bankUrl, { headers });
+      if (!bankResponse.ok) {
+        throw new HttpError(503, "Не удалось проверить банк счёта.");
+      }
+      const banks = await bankResponse.json();
+      if (banks.length !== 1 || account.bank_id !== banks[0].id) {
+        throw new HttpError(
+          400,
+          "Для выписки Ameria выберите счёт Ameria Bank.",
+        );
+      }
+    }
     const hash = await digest(bytes);
     const existingUrl = new URL(`${url}/rest/v1/import_batches`);
     existingUrl.search = new URLSearchParams({
@@ -206,8 +220,13 @@ Deno.serve(async (req: Request) => {
       throw new HttpError(503, "Не удалось загрузить категории.");
     }
     const categories: Category[] = await categoryResponse.json();
-    const parsed = parseCashRadarCsv(bytes, account.currency, categories);
-    const objectPath = `${user.id}/${hash}.csv`;
+    const parsed = format === "xlsx"
+      ? await parseAmeriaXlsx(bytes, account.currency, categories)
+      : parseCashRadarCsv(bytes, account.currency, categories);
+    const importFormat = format === "xlsx"
+      ? "ameria_xlsx_v1"
+      : "cashradar_csv_v1";
+    const objectPath = `${user.id}/${hash}.${format}`;
     const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
     const upload = await fetch(
       `${url}/storage/v1/object/statements/${encodedPath}`,
@@ -215,7 +234,9 @@ Deno.serve(async (req: Request) => {
         method: "POST",
         headers: {
           ...headers,
-          "Content-Type": "text/csv",
+          "Content-Type": format === "xlsx"
+            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            : "text/csv",
           "x-upsert": "false",
         },
         body: bytes as Uint8Array<ArrayBuffer>,
@@ -252,6 +273,7 @@ Deno.serve(async (req: Request) => {
           p_items: parsed.items,
           p_errors: parsed.errors,
           p_error_count: parsed.errorCount,
+          p_format: importFormat,
         }),
       },
     );

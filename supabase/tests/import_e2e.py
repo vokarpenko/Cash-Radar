@@ -68,7 +68,8 @@ def signup(email):
     return {'id': data['user']['id'], 'token': data['access_token']}
 
 def invoke(user, account, raw, name='statement.csv'):
-    object_paths.add(f"{user['id']}/{hashlib.sha256(raw).hexdigest()}.csv")
+    extension = 'xlsx' if raw.startswith(b'PK\x03\x04') else 'csv'
+    object_paths.add(f"{user['id']}/{hashlib.sha256(raw).hexdigest()}.{extension}")
     return request('/functions/v1/import-statement', 'POST', token=user['token'], data={'account_id':account,'filename':name,'file_base64':base64.b64encode(raw).decode()})
 
 def get(user, path):
@@ -81,6 +82,33 @@ try:
         code, account = request('/rest/v1/accounts?select=id', 'POST', token=user['token'], data={'name':'Local import wallet','account_type':'cash','currency':'AMD','initial_balance':'100.00'})
         require(code == 201 and len(account) == 1, 'Local account creation failed')
         user['account'] = account[0]['id']
+    code, banks = get(a, '/rest/v1/banks?select=id&code=eq.ameria_am')
+    require(code == 200 and len(banks) == 1, 'Ameria bank missing')
+    code, ameria = request('/rest/v1/accounts?select=id', 'POST', token=a['token'], data={'name':'Synthetic Ameria','account_type':'bank','bank_id':banks[0]['id'],'currency':'AMD','initial_balance':'100.00'})
+    require(code == 201, 'Could not create Ameria test account')
+    ameria_id = ameria[0]['id']
+    xlsx = (root / 'supabase/tests/fixtures/ameria_synthetic.xlsx').read_bytes()
+    code, _ = invoke(a, a['account'], xlsx, 'ameria.xlsx')
+    require(code == 400, 'Ameria import accepted non-Ameria account')
+    code, prepared = invoke(a, ameria_id, xlsx, 'ameria.xlsx')
+    require(code == 200 and prepared.get('status') == 'ready' and not prepared.get('duplicate'), f'Ameria preview failed ({code}): {prepared.get("error", "")}')
+    ameria_batch = prepared['id']
+    code, preview = get(a, f'/rest/v1/import_item_details?select=row_number,amount,currency,account_amount&batch_id=eq.{ameria_batch}&order=row_number')
+    require(code == 200 and len(preview) == 3, 'Ameria preview includes wrong number of transactions')
+    require(preview[1]['currency'] == 'USD' and Decimal(preview[1]['account_amount']) == Decimal('4800'), 'Cross-currency amount wrong')
+    code, batch_info = get(a, f'/rest/v1/import_batches?select=object_path,format&id=eq.{ameria_batch}')
+    require(code == 200 and batch_info[0]['format'] == 'ameria_xlsx_v1', 'Wrong Ameria format')
+    path = batch_info[0]['object_path']
+    code, original = get(a, f'/storage/v1/object/authenticated/statements/{path}')
+    require(code == 200 and original == xlsx, 'Ameria original differs')
+    code, _ = get(b, f'/storage/v1/object/authenticated/statements/{path}')
+    require(code in (400,401,403,404), 'Other user could read Ameria original')
+    code, done = request('/rest/v1/rpc/confirm_statement_import', 'POST', token=a['token'], data={'p_batch_id':ameria_batch})
+    require(code == 200 and done.get('imported_count') == 3, 'Ameria confirmation failed')
+    code, balance = get(a, f'/rest/v1/account_balances?select=current_balance&id=eq.{ameria_id}')
+    require(code == 200 and Decimal(balance[0]['current_balance']) == Decimal('-3800.00'), 'Ameria balance wrong')
+    code, repeat = invoke(a, ameria_id, xlsx, 'again.xlsx')
+    require(code == 200 and repeat.get('duplicate') and repeat.get('id') == ameria_batch, 'Ameria duplicate was not detected')
     header = 'date,type,amount,currency,account_amount,category,description\n'
     content = (header + '2026-11-11,expense,10.25,AMD,,Продукты,Local test\n2026-11-12,income,2.00,AMD,,Зарплата,Local test\n').encode()
     code, result = invoke(a, a['account'], content)
@@ -170,7 +198,7 @@ try:
     require(code >= 400, 'Other user account accepted')
     code, _ = invoke(a, a['account'], b'%PDF-1.7 example')
     require(code == 422, 'Unsupported PDF not detected')
-    code, _ = invoke(a, a['account'], b'PK\x03\x04 example')
+    code, _ = invoke(a, ameria_id, b'PK\x03\x04 example')
     require(code == 422, 'Unsupported XLSX/ZIP not detected')
     code, _ = request('/functions/v1/import-statement', 'POST', data={'account_id':a['account'],'file_base64':''})
     require(code in (401,403), 'Unauthenticated import allowed')

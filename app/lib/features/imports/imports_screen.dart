@@ -248,7 +248,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Сейчас поддерживается CashRadar CSV до 1 МиБ и 500 строк. Банковские XLSX/PDF будут добавлены позже.',
+                  'Поддерживаются CashRadar CSV и Ameria XLSX: до 1 МиБ и 500 операций. Категории Ameria — «Прочие доходы» и «Прочие расходы». Снятие блокировки без проводки не создаёт операцию. Проверяйте пересечения с уже внесёнными операциями.',
                 ),
                 const SizedBox(height: 8),
                 const SelectableText(
@@ -420,7 +420,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${_status(batch.status)} · формат: CashRadar CSV · валюта счёта: ${batch.accountCurrency}',
+                  '${_status(batch.status)} · формат: ${batch.format == 'ameria_xlsx_v1' ? 'Ameria XLSX' : 'CashRadar CSV'} · валюта счёта: ${batch.accountCurrency}',
                 ),
                 Text(
                   account == null
