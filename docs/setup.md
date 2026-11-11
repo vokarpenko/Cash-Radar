@@ -104,3 +104,22 @@ python3 supabase/tests/category_concurrency.py
 ```
 
 SQL-тест откатывает свои фикстуры; конкурентный тест создаёт и удаляет только собственного тестового пользователя. Запускать их только на локальном Supabase.
+
+## Локальная проверка импорта
+
+Формат и пример файла описаны в [CashRadar CSV](cashradar_csv.md). В отдельном терминале из корня репозитория запустите функцию в той же сети, что и локальный Supabase:
+
+```sh
+npx --yes supabase@3 functions serve import-statement --network-id cash-radar-loopback
+```
+
+Затем из корня репозитория выполните проверки. Сквозной тест использует только локальный адрес и временных пользователей; он удаляет только собственные тестовые объекты и аккаунты.
+
+```sh
+npx --yes deno@2 test supabase/tests/import_parser_test.ts
+docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/statement_imports.sql
+python3 supabase/tests/import_e2e.py
+```
+
+Для облачного развёртывания после проверки списка миграций и целевого проекта отдельно публикуется функция `npx --yes supabase@3 functions deploy import-statement --remote=mawljmoijqhcdbmszglq --use-api`. Проверка JWT остаётся включённой; `--no-verify-jwt` и `--prune` не использовать.

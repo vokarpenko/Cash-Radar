@@ -35,7 +35,7 @@ $$;
 
 insert into public.accounts (id, user_id, name, account_type, currency, initial_balance)
 values
-  ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Wallet A', 'cash', 'AMD', 10.1234),
+  ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Wallet A', 'cash', 'AMD', 10.12),
   ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000002', 'Wallet B', 'cash', 'RUB', -5.50);
 select pg_catalog.set_config('test.category_a', (select id::text from public.categories where user_id = '10000000-0000-4000-8000-000000000001' and name = 'Продукты'), true);
 select pg_catalog.set_config('test.category_b', (select id::text from public.categories where user_id = '10000000-0000-4000-8000-000000000002' and name = 'Продукты'), true);
@@ -67,7 +67,7 @@ begin
   get diagnostics changed = row_count;
   if changed <> 0 then raise exception 'Other category was deleted'; end if;
 
-  insert into public.accounts (name, account_type, currency, initial_balance) values ('Own wallet', 'cash', 'EUR', -7.1250);
+  insert into public.accounts (name, account_type, currency, initial_balance) values ('Own wallet', 'cash', 'EUR', -7.12);
   if (select count(*) from public.accounts) <> 2 then raise exception 'Own account insertion failed'; end if;
   begin
     insert into public.accounts (user_id, name, account_type, currency)
@@ -75,7 +75,7 @@ begin
     raise exception 'User could spoof account owner';
   exception when insufficient_privilege then null; end;
   begin
-    insert into public.accounts (name, account_type, currency, initial_balance) values ('Invalid precision', 'cash', 'AMD', 0.00001);
+    insert into public.accounts (name, account_type, currency, initial_balance) values ('Invalid precision', 'cash', 'AMD', 0.001);
     raise exception 'Excess fractional precision accepted';
   exception when check_violation then null; end;
   begin

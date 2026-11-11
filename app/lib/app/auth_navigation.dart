@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../features/accounts/accounts_repository.dart';
 import '../features/auth/auth_service.dart';
+import '../features/imports/import_repository.dart';
 import '../features/settings/currency_repository.dart';
 import '../features/transactions/transactions_repository.dart';
 
@@ -79,6 +80,8 @@ final authNavigationProvider = Provider<AuthNavigation>(
         ref.invalidate(baseCurrencyProvider);
         ref.invalidate(transactionsProvider);
         ref.invalidate(transactionCategoriesProvider);
+        ref.invalidate(importBatchesProvider);
+        ref.invalidate(importDetailProvider);
       },
     );
     ref.onDispose(controller.dispose);
@@ -91,5 +94,7 @@ final authNavigationProvider = Provider<AuthNavigation>(
     baseCurrencyProvider,
     transactionsProvider,
     transactionCategoriesProvider,
+    importBatchesProvider,
+    importDetailProvider,
   ],
 );

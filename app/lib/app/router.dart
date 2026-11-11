@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/accounts/accounts_screen.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
+import '../features/imports/imports_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/transactions/transactions_screen.dart';
 import 'app_shell.dart';
@@ -14,6 +15,7 @@ const _protectedPaths = {
   '/dashboard',
   '/accounts',
   '/transactions',
+  '/imports',
   '/settings',
 };
 
@@ -70,6 +72,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/transactions',
             builder: (context, state) => const TransactionsScreen(),
+          ),
+          GoRoute(
+            path: '/imports',
+            builder: (context, state) => const ImportsScreen(),
           ),
           GoRoute(
             path: '/settings',

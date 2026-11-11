@@ -303,6 +303,39 @@ void main() {
     expect(repository.lastInput!.accountAmount, '12.34');
   });
 
+  testWidgets(
+    'amount fields reject letters and extra decimal digits while typing',
+    (tester) async {
+      await open(tester);
+      await tester.tap(find.text('Добавить операцию'));
+      await tester.pumpAndSettle();
+      await tester.tap(dropdown(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cash · AMD').last);
+      await tester.pumpAndSettle();
+      final amount = find.widgetWithText(TextFormField, 'Сумма операции');
+      await tester.enterText(amount, '1000.22');
+      await tester.enterText(amount, '1000.22ыва21');
+      expect(tester.widget<TextFormField>(amount).controller!.text, '1000.22');
+      await tester.enterText(amount, '1000.223');
+      expect(tester.widget<TextFormField>(amount).controller!.text, '1000.22');
+      await tester.tap(dropdown(3));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('EUR').last);
+      await tester.pumpAndSettle();
+      final accountAmount = find.widgetWithText(
+        TextFormField,
+        'Сумма по счёту (AMD)',
+      );
+      await tester.enterText(accountAmount, '25,50');
+      await tester.enterText(accountAmount, '25,50abc');
+      expect(
+        tester.widget<TextFormField>(accountAmount).controller!.text,
+        '25,50',
+      );
+    },
+  );
+
   testWidgets('rejects zero and invalid precision', (tester) async {
     await open(tester);
     await tester.tap(find.text('Добавить операцию'));

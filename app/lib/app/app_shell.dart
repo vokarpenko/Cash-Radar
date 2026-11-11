@@ -24,6 +24,12 @@ const _destinations = [
     selected: Icons.receipt_long,
   ),
   (
+    path: '/imports',
+    label: 'Импорт',
+    icon: Icons.file_upload_outlined,
+    selected: Icons.file_upload,
+  ),
+  (
     path: '/settings',
     label: 'Настройки',
     icon: Icons.settings_outlined,
