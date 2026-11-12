@@ -17,6 +17,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
   late final AuthNavigation _navigation;
   String? _userId, _accountId, _selectedBatch;
   SelectedStatement? _file;
+  final _password = TextEditingController();
   bool _busy = false;
   int _sessionVersion = 0;
   String? _error;
@@ -33,6 +34,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
     if (_userId == _navigation.userId) return;
     _userId = _navigation.userId;
     _sessionVersion++;
+    _password.clear();
     setState(() {
       _file = null;
       _accountId = null;
@@ -45,6 +47,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
   @override
   void dispose() {
     _navigation.removeListener(_onSessionChanged);
+    _password.dispose();
     super.dispose();
   }
 
@@ -63,7 +66,10 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
           _navigation.userId != owner) {
         return;
       }
-      if (result != null) setState(() => _file = result);
+      if (result != null) {
+        _password.clear();
+        setState(() => _file = result);
+      }
     } on ImportProblem catch (e) {
       if (mounted &&
           _sessionVersion == version &&
@@ -92,12 +98,18 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
     try {
       final result = await ref
           .read(importsRepositoryProvider)
-          .prepare(account, file, owner);
+          .prepare(
+            account,
+            file,
+            owner,
+            password: file.isEncryptedOffice ? _password.text : null,
+          );
       if (!mounted ||
           _sessionVersion != version ||
           _navigation.userId != owner) {
         return;
       }
+      _password.clear();
       setState(() {
         _file = null;
         _selectedBatch = result.id;
@@ -248,9 +260,22 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Поддерживаются CashRadar CSV и Ameria XLSX: до 1 МиБ и 500 операций. Категории Ameria — «Прочие доходы» и «Прочие расходы». Снятие блокировки без проводки не создаёт операцию. Проверяйте пересечения с уже внесёнными операциями.',
+                  'Поддерживаются CashRadar CSV, Ameria XLSX и ACBA XLSX: до 1 МиБ и 500 операций. Категории банковских операций — «Прочие доходы» и «Прочие расходы». Снятие блокировки без проводки не создаёт операцию. Проверяйте пересечения с уже внесёнными операциями.',
                 ),
                 const SizedBox(height: 8),
+                if (_file?.isEncryptedOffice == true)
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    maxLength: 255,
+                    decoration: const InputDecoration(
+                      labelText: 'Пароль от файла ACBA',
+                      helperText:
+                          'Пароль используется только для этой загрузки и не сохраняется.',
+                    ),
+                  ),
                 const SelectableText(
                   'date,type,amount,currency,account_amount,category,description',
                   style: TextStyle(fontSize: 12),
@@ -420,7 +445,11 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${_status(batch.status)} · формат: ${batch.format == 'ameria_xlsx_v1' ? 'Ameria XLSX' : 'CashRadar CSV'} · валюта счёта: ${batch.accountCurrency}',
+                  '${_status(batch.status)} · формат: ${batch.format == 'ameria_xlsx_v1'
+                      ? 'Ameria XLSX'
+                      : batch.format == 'acba_xlsx_v1'
+                      ? 'ACBA XLSX'
+                      : 'CashRadar CSV'} · валюта счёта: ${batch.accountCurrency}',
                 ),
                 Text(
                   account == null
@@ -475,6 +504,10 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                         Text(
                           '${row.type == 'income' ? '+' : '−'}${Money.displayStored(row.amount)} ${row.currency}',
                         ),
+                        if (row.commissionAmount != null)
+                          Text(
+                            'Комиссия: −${Money.displayStored(row.commissionAmount!)} ${batch.accountCurrency} · отдельная операция',
+                          ),
                       ],
                     ),
                   ),

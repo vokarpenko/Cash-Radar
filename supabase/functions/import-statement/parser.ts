@@ -9,6 +9,8 @@ export type ImportItem = {
   category_id: string;
   raw_description: string | null;
   raw_data: Record<string, string>;
+  commission_amount?: string;
+  commission_category_id?: string;
 };
 export type ImportError = { row: number; message: string };
 export type ParsedImport = {
@@ -32,10 +34,16 @@ const limitRows = 500;
 
 export function detectFormat(
   bytes: Uint8Array,
-): "pdf" | "xlsx" | "csv" | "unknown" {
+): "pdf" | "xlsx" | "encrypted_xlsx" | "csv" | "unknown" {
   if (
     bytes.length >= 5 && new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-"
   ) return "pdf";
+  if (
+    bytes.length >= 8 &&
+    [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1].every((v, i) =>
+      bytes[i] === v
+    )
+  ) return "encrypted_xlsx";
   if (
     bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b &&
     bytes[2] === 3 && bytes[3] === 4

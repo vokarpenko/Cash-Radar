@@ -16,6 +16,18 @@ class SelectedStatement {
   const SelectedStatement(this.name, this.bytes);
   final String name;
   final Uint8List bytes;
+  bool get isEncryptedOffice =>
+      bytes.length >= 8 &&
+      const [
+        0xd0,
+        0xcf,
+        0x11,
+        0xe0,
+        0xa1,
+        0xb1,
+        0x1a,
+        0xe1,
+      ].asMap().entries.every((e) => bytes[e.key] == e.value);
 }
 
 abstract interface class StatementFilePicker {
@@ -112,10 +124,11 @@ class ImportRow {
     required this.accountAmount,
     required this.category,
     this.description,
+    this.commissionAmount,
   });
   final int rowNumber;
   final String date, type, amount, currency, accountAmount, category;
-  final String? description;
+  final String? description, commissionAmount;
   factory ImportRow.fromJson(Map<String, dynamic> row) => ImportRow(
     rowNumber: row['row_number'] as int,
     date: row['transaction_date'] as String,
@@ -125,6 +138,7 @@ class ImportRow {
     accountAmount: row['account_amount'] as String,
     category: row['category_name'] as String,
     description: row['raw_description'] as String?,
+    commissionAmount: row['commission_amount'] as String?,
   );
 }
 
@@ -146,8 +160,9 @@ abstract interface class ImportsRepository {
   Future<PrepareResult> prepare(
     String accountId,
     SelectedStatement file,
-    String expectedUserId,
-  );
+    String expectedUserId, {
+    String? password,
+  });
   Future<void> confirm(String id);
   Future<void> cancel(String id);
 }
@@ -179,7 +194,7 @@ class SupabaseImportsRepository implements ImportsRepository {
     final items = await client
         .from('import_item_details')
         .select(
-          'row_number,transaction_date,transaction_type,amount,currency,account_amount,category_name,raw_description',
+          'row_number,transaction_date,transaction_type,amount,currency,account_amount,category_name,raw_description,commission_amount',
         )
         .eq('batch_id', id)
         .order('row_number');
@@ -193,8 +208,9 @@ class SupabaseImportsRepository implements ImportsRepository {
   Future<PrepareResult> prepare(
     String accountId,
     SelectedStatement file,
-    String expectedUserId,
-  ) async {
+    String expectedUserId, {
+    String? password,
+  }) async {
     final session = client.auth.currentSession;
     if (session == null || session.user.id != expectedUserId) {
       throw const ImportProblem('Сессия изменилась. Выберите файл заново.');
@@ -207,6 +223,7 @@ class SupabaseImportsRepository implements ImportsRepository {
           'account_id': accountId,
           'filename': file.name,
           'file_base64': base64Encode(file.bytes),
+          if (password != null && password.isNotEmpty) 'password': password,
         },
       );
       final data = result.data as Map<String, dynamic>;

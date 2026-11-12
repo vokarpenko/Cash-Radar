@@ -107,7 +107,7 @@ SQL-тест откатывает свои фикстуры; конкурент�
 
 ## Локальная проверка импорта
 
-Формат и пример файла описаны в [CashRadar CSV](cashradar_csv.md); особенности банковской выписки — в [Ameria XLSX](ameria_xlsx.md). В отдельном терминале из корня репозитория запустите функцию в той же сети, что и локальный Supabase:
+Формат и пример файла описаны в [CashRadar CSV](cashradar_csv.md); особенности банковских выписок — в [Ameria XLSX](ameria_xlsx.md) и [ACBA XLSX](acba_xlsx.md). В отдельном терминале из корня репозитория запустите функцию в той же сети, что и локальный Supabase:
 
 ```sh
 npx --yes supabase@3 functions serve import-statement --network-id cash-radar-loopback
@@ -116,7 +116,7 @@ npx --yes supabase@3 functions serve import-statement --network-id cash-radar-lo
 Затем из корня репозитория выполните проверки. Сквозной тест использует только локальный адрес и временных пользователей; он удаляет только собственные тестовые объекты и аккаунты.
 
 ```sh
-npx --yes deno@2 test --allow-read supabase/tests/import_parser_test.ts supabase/tests/ameria_parser_test.ts
+npx --yes deno@2 test --allow-read supabase/tests/import_parser_test.ts supabase/tests/ameria_parser_test.ts supabase/tests/acba_parser_test.ts
 docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
   -v ON_ERROR_STOP=1 < supabase/tests/statement_imports.sql
 python3 supabase/tests/import_e2e.py

@@ -38,9 +38,11 @@ class ImportAccounts implements AccountsRepository {
 
 class TestPicker implements StatementFilePicker {
   Completer<SelectedStatement?>? pending;
+  SelectedStatement? selection;
   @override
   Future<SelectedStatement?> pick() async => pending == null
-      ? SelectedStatement('test.csv', Uint8List.fromList([1, 2, 3]))
+      ? (selection ??
+            SelectedStatement('test.csv', Uint8List.fromList([1, 2, 3])))
       : await pending!.future;
 }
 
@@ -48,7 +50,7 @@ class MemoryImports implements ImportsRepository {
   String status = 'ready', format = 'cashradar_csv_v1';
   bool prepared = false, duplicate = false;
   int confirms = 0, cancellations = 0;
-  String? submittedOwner, submittedAccount;
+  String? submittedOwner, submittedAccount, submittedPassword;
   ImportBatch get batch => ImportBatch(
     id: 'batch',
     accountId: 'a1',
@@ -88,10 +90,12 @@ class MemoryImports implements ImportsRepository {
   Future<PrepareResult> prepare(
     String accountId,
     SelectedStatement file,
-    String expectedUserId,
-  ) async {
+    String expectedUserId, {
+    String? password,
+  }) async {
     submittedAccount = accountId;
     submittedOwner = expectedUserId;
+    submittedPassword = password;
     prepared = true;
     return PrepareResult('batch', duplicate);
   }
@@ -147,7 +151,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> prepare(WidgetTester tester) async {
+  Future<void> prepare(WidgetTester tester, {String? password}) async {
     await Scrollable.ensureVisible(
       tester.element(find.byType(DropdownButtonFormField<String>).first),
       alignment: 0.25,
@@ -164,6 +168,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Выбрать файл'));
     await tester.pumpAndSettle();
+    if (password != null) {
+      final field = find.byType(TextField).first;
+      await tester.ensureVisible(field);
+      await tester.enterText(field, password);
+      await tester.pumpAndSettle();
+    }
     await Scrollable.ensureVisible(
       tester.element(find.text('Подготовить импорт')),
       alignment: 0.25,
@@ -191,6 +201,21 @@ void main() {
     expect(find.textContaining('Импортирован · формат'), findsOneWidget);
     expect(find.text('Подтвердить импорт'), findsNothing);
   });
+  testWidgets(
+    'requests a password only for an encrypted file and clears it after preparation',
+    (tester) async {
+      picker.selection = SelectedStatement(
+        'sample.xlsx',
+        Uint8List.fromList([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]),
+      );
+      imports.format = 'acba_xlsx_v1';
+      await open(tester);
+      await prepare(tester, password: 'synthetic-only');
+      expect(imports.submittedPassword, 'synthetic-only');
+      expect(find.textContaining('формат: ACBA XLSX'), findsOneWidget);
+      expect(find.text('Пароль от файла ACBA'), findsNothing);
+    },
+  );
   testWidgets('labels Ameria XLSX in the preview', (tester) async {
     imports.format = 'ameria_xlsx_v1';
     await open(tester);

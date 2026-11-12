@@ -1,3 +1,5 @@
+import { parseAcbaXlsx } from "./acba.ts";
+import { decryptAcba } from "./encrypted.ts";
 import { parseAmeriaXlsx } from "./ameria.ts";
 import {
   type Category,
@@ -146,10 +148,10 @@ Deno.serve(async (req: Request) => {
         "PDF распознан; поддержка банковских PDF-выписок появится на следующем этапе.",
       );
     }
-    if (format !== "csv" && format !== "xlsx") {
+    if (format !== "csv" && format !== "xlsx" && format !== "encrypted_xlsx") {
       throw new HttpError(
         422,
-        "Формат не распознан. Поддерживаются CashRadar CSV и Ameria XLSX.",
+        "Формат не распознан. Поддерживаются CashRadar CSV и выписки Ameria и ACBA XLSX.",
       );
     }
     const headers = { apikey: service, Authorization: `Bearer ${service}` };
@@ -170,11 +172,12 @@ Deno.serve(async (req: Request) => {
       !accounts[0].is_active
     ) throw new HttpError(400, "Активный счёт не найден.");
     const account = accounts[0];
-    if (format === "xlsx") {
+    let bankCode: string | null = null;
+    if (format !== "csv") {
       const bankUrl = new URL(`${url}/rest/v1/banks`);
       bankUrl.search = new URLSearchParams({
-        select: "id",
-        code: "eq.ameria_am",
+        select: "code",
+        id: `eq.${account.bank_id ?? "00000000-0000-0000-0000-000000000000"}`,
         limit: "1",
       }).toString();
       const bankResponse = await fetch(bankUrl, { headers });
@@ -182,10 +185,17 @@ Deno.serve(async (req: Request) => {
         throw new HttpError(503, "Не удалось проверить банк счёта.");
       }
       const banks = await bankResponse.json();
-      if (banks.length !== 1 || account.bank_id !== banks[0].id) {
+      bankCode = banks[0]?.code ?? null;
+      if (!["ameria_am", "acba_am"].includes(bankCode ?? "")) {
         throw new HttpError(
           400,
-          "Для выписки Ameria выберите счёт Ameria Bank.",
+          "Для банковской выписки выберите счёт Ameria или ACBA.",
+        );
+      }
+      if (format === "encrypted_xlsx" && bankCode !== "acba_am") {
+        throw new HttpError(
+          400,
+          "Защищённую выписку ACBA импортируйте на счёт ACBA.",
         );
       }
     }
@@ -220,13 +230,25 @@ Deno.serve(async (req: Request) => {
       throw new HttpError(503, "Не удалось загрузить категории.");
     }
     const categories: Category[] = await categoryResponse.json();
-    const parsed = format === "xlsx"
-      ? await parseAmeriaXlsx(bytes, account.currency, categories)
-      : parseCashRadarCsv(bytes, account.currency, categories);
-    const importFormat = format === "xlsx"
-      ? "ameria_xlsx_v1"
-      : "cashradar_csv_v1";
-    const objectPath = `${user.id}/${hash}.${format}`;
+    let parsed;
+    if (format === "csv") {
+      parsed = parseCashRadarCsv(bytes, account.currency, categories);
+    } else {
+      const content = format === "encrypted_xlsx"
+        ? await decryptAcba(bytes, body.password)
+        : bytes;
+      parsed = bankCode === "acba_am"
+        ? await parseAcbaXlsx(content, account.currency, categories)
+        : await parseAmeriaXlsx(content, account.currency, categories);
+    }
+    const importFormat = format === "csv"
+      ? "cashradar_csv_v1"
+      : bankCode === "acba_am"
+      ? "acba_xlsx_v1"
+      : "ameria_xlsx_v1";
+    const objectPath = `${user.id}/${hash}.${
+      format === "csv" ? "csv" : "xlsx"
+    }`;
     const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
     const upload = await fetch(
       `${url}/storage/v1/object/statements/${encodedPath}`,
@@ -234,7 +256,9 @@ Deno.serve(async (req: Request) => {
         method: "POST",
         headers: {
           ...headers,
-          "Content-Type": format === "xlsx"
+          "Content-Type": format === "encrypted_xlsx"
+            ? "application/vnd.ms-excel"
+            : format === "xlsx"
             ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             : "text/csv",
           "x-upsert": "false",

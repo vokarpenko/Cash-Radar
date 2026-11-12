@@ -67,10 +67,10 @@ def signup(email):
     require(code == 200, 'Local login failed')
     return {'id': data['user']['id'], 'token': data['access_token']}
 
-def invoke(user, account, raw, name='statement.csv'):
-    extension = 'xlsx' if raw.startswith(b'PK\x03\x04') else 'csv'
+def invoke(user, account, raw, name='statement.csv', password=None):
+    extension = 'xlsx' if raw.startswith((b'PK\x03\x04',b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1')) else 'csv'
     object_paths.add(f"{user['id']}/{hashlib.sha256(raw).hexdigest()}.{extension}")
-    return request('/functions/v1/import-statement', 'POST', token=user['token'], data={'account_id':account,'filename':name,'file_base64':base64.b64encode(raw).decode()})
+    return request('/functions/v1/import-statement', 'POST', token=user['token'], data={'account_id':account,'filename':name,'file_base64':base64.b64encode(raw).decode(), **({'password':password} if password is not None else {})})
 
 def get(user, path):
     return request(path, token=user['token'])
@@ -109,6 +109,38 @@ try:
     require(code == 200 and Decimal(balance[0]['current_balance']) == Decimal('-3800.00'), 'Ameria balance wrong')
     code, repeat = invoke(a, ameria_id, xlsx, 'again.xlsx')
     require(code == 200 and repeat.get('duplicate') and repeat.get('id') == ameria_batch, 'Ameria duplicate was not detected')
+    code, banks = get(a, '/rest/v1/banks?select=id&code=eq.acba_am')
+    require(code == 200 and len(banks) == 1, 'ACBA bank missing')
+    code, acba = request('/rest/v1/accounts?select=id', 'POST', token=a['token'], data={'name':'Synthetic ACBA','account_type':'bank','bank_id':banks[0]['id'],'currency':'AMD','initial_balance':'1000.00'})
+    require(code == 201, 'Could not create ACBA test account')
+    acba_id = acba[0]['id']
+    encrypted = (root / 'supabase/tests/fixtures/acba_encrypted_synthetic.xlsx').read_bytes()
+    code, _ = invoke(a, acba_id, encrypted, 'acba.xlsx')
+    require(code == 422, 'ACBA accepted missing password')
+    code, _ = invoke(a, acba_id, encrypted, 'acba.xlsx', 'incorrect')
+    require(code == 422, 'ACBA accepted wrong password')
+    code, result = invoke(a, acba_id, encrypted, 'acba.xlsx', 'synthetic-only')
+    require(code == 200 and result.get('status') == 'ready', f'Encrypted ACBA preview failed ({code}): {result.get("error", "")}')
+    acba_batch = result['id']
+    code, rows = get(a, f'/rest/v1/import_item_details?select=row_number,commission_amount&batch_id=eq.{acba_batch}&order=row_number')
+    require(code == 200 and len(rows) == 2 and Decimal(rows[1]['commission_amount']) == Decimal('2.50'), 'Commission missing from preview')
+    code, meta = get(a, f'/rest/v1/import_batches?select=object_path,format&id=eq.{acba_batch}')
+    require(code == 200 and meta[0]['format'] == 'acba_xlsx_v1', 'Wrong ACBA format')
+    path = meta[0]['object_path']
+    code, raw = get(a, f'/storage/v1/object/authenticated/statements/{path}')
+    require(code == 200 and raw == encrypted, 'ACBA original was not preserved encrypted')
+    code, _ = get(b, f'/storage/v1/object/authenticated/statements/{path}')
+    require(code in (400,401,403,404), 'Other user can read ACBA original')
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        confirms = list(pool.map(lambda _: request('/rest/v1/rpc/confirm_statement_import', 'POST', token=a['token'], data={'p_batch_id':acba_batch}), range(4)))
+    require(all(code == 200 and done.get('imported_count') == 3 for code, done in confirms), 'ACBA commission was not posted as a transaction')
+    require(sum(not done.get('already_confirmed') for _, done in confirms) == 1, 'Concurrent ACBA confirmation duplicated the fee')
+    code, posted = get(a, f'/rest/v1/transaction_details?select=id&account_id=eq.{acba_id}')
+    require(code == 200 and len(posted) == 3, 'ACBA confirmation posted an incorrect number of transactions')
+    code, balance = get(a, f'/rest/v1/account_balances?select=current_balance&id=eq.{acba_id}')
+    require(code == 200 and Decimal(balance[0]['current_balance']) == Decimal('1047.50'), 'ACBA closing balance is wrong')
+    code, again = invoke(a, acba_id, encrypted, 'same.xlsx', 'synthetic-only')
+    require(code == 200 and again.get('duplicate') and again.get('id') == acba_batch, 'ACBA duplicate not detected')
     header = 'date,type,amount,currency,account_amount,category,description\n'
     content = (header + '2026-11-11,expense,10.25,AMD,,Продукты,Local test\n2026-11-12,income,2.00,AMD,,Зарплата,Local test\n').encode()
     code, result = invoke(a, a['account'], content)
