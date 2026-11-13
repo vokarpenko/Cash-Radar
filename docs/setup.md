@@ -136,6 +136,8 @@ python3 supabase/tests/import_e2e.py
 npx --yes deno@2 test supabase/tests/ai_categorization_test.ts
 docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
   -v ON_ERROR_STOP=1 < supabase/tests/ai_categorization.sql
+docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/ai_unrecognized.sql
 python3 supabase/tests/ai_e2e.py
 ```
 

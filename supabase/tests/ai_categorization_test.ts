@@ -74,7 +74,10 @@ Deno.test("Gemini receives only minimal data and validated output is returned", 
     );
   }) as typeof fetch;
   const result = await queryGemini("local-test-secret", groups, fake);
-  assert(result.length === 1 && result[0].category === "groceries");
+  assert(
+    result.model === "gemini-4-hydrogen" && result.suggestions.length === 1 &&
+      result.suggestions[0].category === "groceries",
+  );
 });
 Deno.test("Gemini failure is safe and does not leak response", async () => {
   const fake =
@@ -89,4 +92,58 @@ Deno.test("Gemini failure is safe and does not leak response", async () => {
         !e.message.includes("private"),
     );
   }
+});
+
+Deno.test("429 on Hydrogen falls back once to Flash and records the actual model", async () => {
+  const urls: string[] = [];
+  const fake = (async (url: string | URL | Request) => {
+    urls.push(String(url));
+    if (urls.length === 1) return new Response("limit", { status: 429 });
+    return new Response(
+      JSON.stringify({
+        candidates: [{
+          finishReason: "STOP",
+          content: { parts: [{ text: JSON.stringify(good) }] },
+        }],
+      }),
+      { status: 200 },
+    );
+  }) as typeof fetch;
+  const result = await queryGemini("local-test-secret", groups, fake);
+  assert(
+    urls.length === 2 && urls[0].includes("gemini-4-hydrogen") &&
+      urls[1].includes("gemini-3.8-flash"),
+  );
+  assert(
+    result.model === "gemini-3.8-flash" &&
+      result.suggestions[0].category === "groceries",
+  );
+});
+Deno.test("other errors do not cause a fallback request", async () => {
+  let calls = 0;
+  const fake = (async () => {
+    calls++;
+    return new Response("failure", { status: 503 });
+  }) as typeof fetch;
+  try {
+    await queryGemini("local-test-secret", groups, fake);
+    throw Error("should fail");
+  } catch (e) {
+    assert(e instanceof Error && e.message.includes("отклонил"));
+  }
+  assert(calls === 1);
+});
+Deno.test("limit on both models stops after two calls", async () => {
+  let calls = 0;
+  const fake = (async () => {
+    calls++;
+    return new Response("limit", { status: 429 });
+  }) as typeof fetch;
+  try {
+    await queryGemini("local-test-secret", groups, fake);
+    throw Error("should fail");
+  } catch (e) {
+    assert(e instanceof Error && e.message.includes("обеих"));
+  }
+  assert(calls === 2);
 });

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../app/auth_navigation.dart';
 import '../imports/import_repository.dart';
 import '../transactions/transactions_repository.dart';
+import 'ai_eligibility.dart';
 
 class AiImportPanel extends ConsumerStatefulWidget {
   const AiImportPanel({
@@ -50,7 +51,9 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
         _candidates = result
             .map((x) => Map<String, dynamic>.from(x as Map))
             .toList();
-        _selected.clear();
+        _selected
+          ..clear()
+          ..addAll(initiallySelectedAiGroups(_candidates!));
       });
     } catch (_) {
       if (_sameUser) {
@@ -83,12 +86,14 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
           ],
         },
       );
-      if (!_sameUser) return;
+      if (!mounted || !_sameUser) return;
       final data = response.data as Map;
-      setState(
-        () => _message =
-            'Создано правил: ${data['rules']}; предложений для проверки: ${data['suggestions']}.',
-      );
+      final message =
+          'Создано правил: ${data['rules']}; предложений: ${data['suggestions']}; не распознано: ${data['unrecognized']}. Модель: ${data['model']}. ${data['missing_categories'] == 0 ? '' : 'Для ${data['missing_categories']} названий не найдена подходящая категория.'}';
+      setState(() => _message = message);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
       ref.invalidate(importDetailProvider(widget.batchId));
       await _load();
     } on FunctionException catch (e) {
@@ -114,11 +119,13 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
     final rows = _candidates;
     return ExpansionTile(
       title: const Text('Категоризация с Gemini'),
-      subtitle: const Text('Выберите публичные названия для проверки'),
+      subtitle: const Text(
+        'Проверьте отмеченные публичные названия перед отправкой',
+      ),
       childrenPadding: const EdgeInsets.symmetric(horizontal: 12),
       children: [
         const Text(
-          'Google получит только выбранные названия и тип операции. На бесплатном тарифе Google может использовать запросы для улучшения сервисов; название может раскрывать сведения о покупке. Не выбирайте личные данные или номера.',
+          'Названия отмечены заранее — снимите отметки с личных и непубличных данных. Нажатие кнопки отправит отмеченное в Google. Google получит только выбранные названия и тип операции. На бесплатном тарифе Google может использовать запросы для улучшения сервисов; название может раскрывать сведения о покупке. Не выбирайте личные данные или номера.',
         ),
         if (widget.completed)
           const Text(
@@ -127,6 +134,14 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
         if (rows == null && _error == null) const CircularProgressIndicator(),
         if (rows != null && rows.isEmpty)
           const Text('Неизвестных названий для проверки нет.'),
+        if (rows != null &&
+            rows
+                    .where((c) => isEligibleAiName(c['merchant'] as String))
+                    .length >
+                10)
+          const Text(
+            'За один запрос можно отправить до 10 названий; остальные будут доступны следующим пакетом.',
+          ),
         if (rows != null)
           for (final c in rows)
             CheckboxListTile(
@@ -134,9 +149,9 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
               value: _selected.contains(c['group_id']),
               title: Text(c['merchant'] as String),
               subtitle: Text(
-                '${c['kind'] == 'income' ? 'Доход' : 'Расход'} · операций: ${c['item_count']}',
+                '${c['kind'] == 'income' ? 'Доход' : 'Расход'} · операций: ${c['item_count']}${isEligibleAiName(c['merchant'] as String) ? '' : ' · нельзя отправить автоматически'}',
               ),
-              onChanged: _busy
+              onChanged: _busy || !isEligibleAiName(c['merchant'] as String)
                   ? null
                   : (value) => setState(() {
                       if (value == true && _selected.length < 10) {
@@ -156,6 +171,10 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
                   : 'Отправить выбранные (${_selected.length}/10)',
             ),
           ),
+        TextButton(
+          onPressed: _busy ? null : _load,
+          child: const Text('Обновить список'),
+        ),
         if (_message != null) Text(_message!),
         if (_error != null)
           Text(
@@ -176,7 +195,7 @@ class AiRulesPanel extends ConsumerStatefulWidget {
 
 class _AiRulesPanelState extends ConsumerState<AiRulesPanel> {
   SupabaseClient get _client => Supabase.instance.client;
-  List<Map<String, dynamic>>? _rules, _suggestions;
+  List<Map<String, dynamic>>? _rules, _suggestions, _unrecognized;
   bool _busy = false;
   String? _owner, _error;
   @override
@@ -201,8 +220,13 @@ class _AiRulesPanelState extends ConsumerState<AiRulesPanel> {
           .select()
           .eq('status', 'pending')
           .order('merchant_name');
+      final unrecognized = await _client
+          .from('ai_unrecognized_merchants')
+          .select()
+          .order('merchant_name');
       if (_sameUser) {
         setState(() {
+          _unrecognized = unrecognized;
           _rules = rules;
           _suggestions = suggestions;
         });
@@ -298,6 +322,30 @@ class _AiRulesPanelState extends ConsumerState<AiRulesPanel> {
                         .from('ai_merchant_rules')
                         .delete()
                         .eq('id', r['id']);
+                  }),
+          ),
+        ),
+      Text('Не распознаны AI', style: Theme.of(context).textTheme.titleMedium),
+      const Text(
+        'Эти названия повторно не отправляются. Удалите запись, чтобы попробовать ещё раз.',
+      ),
+      if (_unrecognized != null && _unrecognized!.isEmpty)
+        const Text('Нераспознанных названий нет.'),
+      for (final u in _unrecognized ?? <Map<String, dynamic>>[])
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(u['merchant_name'] as String),
+          subtitle: Text(u['kind'] == 'income' ? 'Доход' : 'Расход'),
+          trailing: IconButton(
+            tooltip: 'Разрешить повторную проверку',
+            icon: const Icon(Icons.replay),
+            onPressed: _busy
+                ? null
+                : () => _run(() async {
+                    await _client
+                        .from('ai_unrecognized_merchants')
+                        .delete()
+                        .eq('id', u['id']);
                   }),
           ),
         ),

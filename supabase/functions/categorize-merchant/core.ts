@@ -1,6 +1,7 @@
 // The only data sent to the provider are names the user explicitly reviewed and
 // an ephemeral group index. Account/transaction identifiers never leave Supabase.
-export const MODEL = "gemini-4-hydrogen";
+export const PRIMARY_MODEL = "gemini-4-hydrogen";
+export const FALLBACK_MODEL = "gemini-3.8-flash";
 export const PROMPT_VERSION = "merchant-category-v1";
 export const MAX_GROUPS = 10;
 export const CATEGORIES = [
@@ -146,43 +147,53 @@ export async function queryGemini(
   apiKey: string,
   groups: Group[],
   fetcher: typeof fetch = fetch,
-): Promise<Suggestion[]> {
+): Promise<{ model: string; suggestions: Suggestion[] }> {
   if (!apiKey) throw new CategorizationError("Ключ Gemini не настроен.");
   const { prompt } = preparePrompt(groups);
-  const timeout = AbortSignal.timeout(30000);
-  let response: Response;
-  try {
-    response = await fetcher(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        signal: timeout,
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseJsonSchema: responseSchema,
-            temperature: 0,
-            maxOutputTokens: 2048,
+  const request = async (model: string): Promise<Response> => {
+    try {
+      return await fetcher(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
           },
-        }),
-      },
-    );
-  } catch {
-    throw new CategorizationError(
-      "Gemini недоступен или превысил время ожидания.",
-    );
+          signal: AbortSignal.timeout(30000),
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseJsonSchema: responseSchema,
+              ...(model === FALLBACK_MODEL
+                ? { thinkingConfig: { thinkingLevel: "LOW" } }
+                : { temperature: 0 }),
+              maxOutputTokens: 2048,
+            },
+          }),
+        },
+      );
+    } catch {
+      throw new CategorizationError(
+        "Gemini недоступен или превысил время ожидания.",
+      );
+    }
+  };
+  let model = PRIMARY_MODEL;
+  let response = await request(model);
+  if (response.status === 429) {
+    model = FALLBACK_MODEL;
+    response = await request(model);
   }
   if (response.status === 429) {
-    throw new CategorizationError("Лимит Gemini исчерпан. Повторите позже.");
+    throw new CategorizationError(
+      "Лимит обеих моделей Gemini исчерпан. Повторите позже.",
+    );
   }
   if (!response.ok) {
     throw new CategorizationError(
-      "Gemini отклонил запрос. Проверьте настройки и доступность сервиса.",
+      `Gemini отклонил запрос (${model}, HTTP ${response.status}). Проверьте доступность сервиса.`,
     );
   }
   try {
@@ -198,7 +209,7 @@ export async function queryGemini(
       p.thought !== true && typeof p.text === "string"
     ).map((p: Record<string, unknown>) => p.text).join("");
     if (text.length > 16000) throw Error();
-    return validateResults(JSON.parse(text), groups);
+    return { model, suggestions: validateResults(JSON.parse(text), groups) };
   } catch (e) {
     if (e instanceof CategorizationError) throw e;
     throw new CategorizationError("Не удалось проверить ответ Gemini.");

@@ -30,10 +30,10 @@ do $$ begin
 end $$;
 select public.ai_store_results('91000000-0000-4000-8000-000000000001',current_setting('test.batch')::uuid,'93000000-0000-4000-8000-000000000001',jsonb_build_array(
  jsonb_build_object('groupId',current_setting('test.group'),'category','groceries','confidence',0.95,'unambiguous',true,'reason','clear'),
- jsonb_build_object('groupId',current_setting('test.medium'),'category','taxi','confidence',0.7,'unambiguous',false,'reason','ambiguous')));
+ jsonb_build_object('groupId',current_setting('test.medium'),'category','taxi','confidence',0.7,'unambiguous',false,'reason','ambiguous')),'gemini-4-hydrogen');
 do $$ begin
  if (select count(*) from public.import_items where batch_id=current_setting('test.batch')::uuid and category_id=current_setting('test.food')::uuid and categorization_source='ai')<>2 then raise exception 'AI mapping not applied'; end if;
- if (select count(*) from public.ai_merchant_rules)<>1 or (select count(*) from public.ai_suggestions)<>1 then raise exception 'result storage failed'; end if;
+ if (select count(*) from public.ai_merchant_rules where user_id='91000000-0000-4000-8000-000000000001')<>1 or (select count(*) from public.ai_suggestions where user_id='91000000-0000-4000-8000-000000000001')<>1 then raise exception 'result storage failed'; end if;
  if exists(select 1 from private.ai_candidates('91000000-0000-4000-8000-000000000001',current_setting('test.batch')::uuid)) then raise exception 'known rules or pending suggestions resent'; end if;
 end $$;
 set local role authenticated;
@@ -46,7 +46,7 @@ update public.ai_merchant_rules set enabled=true where merchant_key='imaginary g
 select public.reapply_import_categories(current_setting('test.batch')::uuid);
 reset role;
 select public.ai_release('91000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001');
-select set_config('test.suggestion',(select id::text from public.ai_suggestions limit 1),true);
+select set_config('test.suggestion',(select id::text from public.ai_suggestions where user_id='91000000-0000-4000-8000-000000000001' limit 1),true);
 set local role authenticated;
 select public.ai_review_suggestion(current_setting('test.suggestion')::uuid,true);
 select public.reapply_import_categories(current_setting('test.batch')::uuid);

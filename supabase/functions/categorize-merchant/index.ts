@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
       }
       return { groupId: row.group_id, merchant: row.merchant, kind: row.kind };
     });
-    const results = await queryGemini(key, groups);
+    const result = await queryGemini(key, groups);
     const save = await fetch(`${url}/rest/v1/rpc/ai_store_results`, {
       method: "POST",
       headers: serviceHeaders,
@@ -146,7 +146,8 @@ Deno.serve(async (req) => {
         p_user: userId,
         p_batch: body.batch_id,
         p_token: token,
-        p_results: results,
+        p_results: result.suggestions,
+        p_model: result.model,
       }),
     });
     if (!save.ok) {
@@ -155,7 +156,7 @@ Deno.serve(async (req) => {
         "Не удалось сохранить результат. Повторите позже.",
       );
     }
-    return reply(await save.json());
+    return reply({ ...await save.json(), model: result.model });
   } catch (error) {
     if (error instanceof Problem) {
       return reply({ error: error.message }, error.status);

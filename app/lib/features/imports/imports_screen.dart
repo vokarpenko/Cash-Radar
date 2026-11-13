@@ -581,11 +581,11 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                         if (row.categorizationSource != null)
                           Text(
                             'Категория: ${switch (row.categorizationSource) {
-                              'rule' => 'правило',
+                              'rule' => 'автоматически по вашему правилу · запрос к Gemini не нужен',
                               'alias' => 'алиас',
                               'mcc' => 'MCC',
                               'history' => 'предыдущее исправление',
-                              'ai' => 'AI-соответствие',
+                              'ai' => 'автоматически по сохранённому AI-правилу · запрос к Gemini не нужен',
                               'fallback' => 'по умолчанию',
                               _ => 'вручную',
                             }}',
