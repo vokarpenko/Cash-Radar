@@ -127,3 +127,16 @@ python3 supabase/tests/import_e2e.py
 ```
 
 Для облачного развёртывания после проверки списка миграций и целевого проекта отдельно публикуется функция `npx --yes supabase@3 functions deploy import-statement --remote=mawljmoijqhcdbmszglq --use-api`. Проверка JWT остаётся включённой; `--no-verify-jwt` и `--prune` не использовать.
+
+## AI-категоризация локально
+
+Добавьте `GEMINI_API_KEY` в игнорируемый Git файл `supabase/functions/.env`. Не включайте его в клиентскую конфигурацию и не передавайте в чат. Локально запустите функцию `npx --yes supabase@3 functions serve categorize-merchant --network-id cash-radar-loopback`. Перед облачной публикацией необходимо отдельно добавить этот секрет в настройки Supabase и развернуть миграцию и функцию; до этого AI на опубликованном сайте недоступен. Не печатайте ключ в терминале и журналах.
+
+```sh
+npx --yes deno@2 test supabase/tests/ai_categorization_test.ts
+docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/ai_categorization.sql
+python3 supabase/tests/ai_e2e.py
+```
+
+Последняя проверка работает только с локальным Supabase и тестовым аккаунтом, но делает настоящий запрос к Gemini с вымышленным названием. Реальные выписки при этом не используются. Доступность модели и квота зависят от проекта Google AI Studio.

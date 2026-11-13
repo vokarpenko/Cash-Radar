@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/auth_navigation.dart';
 import '../accounts/accounts_repository.dart';
 import '../accounts/money.dart';
+import '../categorization/ai_panel.dart';
 import '../transactions/transactions_repository.dart';
 import 'import_repository.dart';
 
@@ -555,6 +556,13 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                   Text(
                     'Показаны первые ${batch.errors.length} ошибок из ${batch.errorCount}.',
                   ),
+                if ((batch.status == 'ready' || batch.status == 'completed') &&
+                    batch.format != 'cashradar_csv_v1')
+                  AiImportPanel(
+                    key: ValueKey(batch.id),
+                    batchId: batch.id,
+                    completed: batch.status == 'completed',
+                  ),
                 for (final row in data.rows)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -577,6 +585,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                               'alias' => 'алиас',
                               'mcc' => 'MCC',
                               'history' => 'предыдущее исправление',
+                              'ai' => 'AI-соответствие',
                               'fallback' => 'по умолчанию',
                               _ => 'вручную',
                             }}',

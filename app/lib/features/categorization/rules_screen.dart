@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/auth_navigation.dart';
 import '../transactions/transactions_repository.dart';
 import 'rules_repository.dart';
+import 'ai_panel.dart';
 
 class RulesDialog extends ConsumerStatefulWidget {
   const RulesDialog({super.key});
@@ -162,6 +163,7 @@ class _RulesDialogState extends ConsumerState<RulesDialog> {
                         icon: const Icon(Icons.delete_outline),
                       ),
                     ),
+                  AiRulesPanel(categories: cats),
                   const Divider(),
                   Text(
                     'Алиасы',
