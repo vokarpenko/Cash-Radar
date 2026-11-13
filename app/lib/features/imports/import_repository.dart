@@ -73,6 +73,7 @@ class ImportBatch {
     required this.format,
     this.periodStart,
     this.periodEnd,
+    this.duplicateCount = 0,
   });
   final String id,
       accountId,
@@ -81,7 +82,7 @@ class ImportBatch {
       status,
       createdAt,
       format;
-  final int rowCount, errorCount, importedCount;
+  final int rowCount, errorCount, importedCount, duplicateCount;
   final String? periodStart, periodEnd;
   final List<ImportIssue> errors;
   factory ImportBatch.fromJson(Map<String, dynamic> row) => ImportBatch(
@@ -103,6 +104,7 @@ class ImportBatch {
         .toList(growable: false),
     createdAt: row['created_at'] as String,
     format: row['format'] as String,
+    duplicateCount: row['duplicate_count'] as int? ?? 0,
     periodStart: row['period_start'] as String?,
     periodEnd: row['period_end'] as String?,
   );
@@ -125,11 +127,33 @@ class ImportRow {
     required this.category,
     this.description,
     this.commissionAmount,
+    this.id,
+    this.candidates = const [],
+    this.duplicateDecision,
+    this.candidateSignature,
+    this.duplicateSignature,
   });
   final int rowNumber;
   final String date, type, amount, currency, accountAmount, category;
-  final String? description, commissionAmount;
-  factory ImportRow.fromJson(Map<String, dynamic> row) => ImportRow(
+  final String? description,
+      commissionAmount,
+      id,
+      duplicateDecision,
+      candidateSignature,
+      duplicateSignature;
+  final List<ImportCandidate> candidates;
+  bool get needsReview => candidates.isNotEmpty
+      ? duplicateDecision == null || candidateSignature != duplicateSignature
+      : duplicateDecision != null;
+  factory ImportRow.fromJson(
+    Map<String, dynamic> row,
+    List<ImportCandidate> candidates,
+  ) => ImportRow(
+    id: row['id'] as String,
+    candidates: candidates,
+    duplicateDecision: row['duplicate_decision'] as String?,
+    candidateSignature: row['candidate_signature'] as String?,
+    duplicateSignature: row['duplicate_signature'] as String?,
     rowNumber: row['row_number'] as int,
     date: row['transaction_date'] as String,
     type: row['transaction_type'] as String,
@@ -139,6 +163,28 @@ class ImportRow {
     category: row['category_name'] as String,
     description: row['raw_description'] as String?,
     commissionAmount: row['commission_amount'] as String?,
+  );
+}
+
+class ImportCandidate {
+  const ImportCandidate({
+    required this.itemId,
+    required this.type,
+    required this.date,
+    required this.source,
+    this.description,
+    this.rowNumber,
+  });
+  final String itemId, type, date, source;
+  final String? description;
+  final int? rowNumber;
+  factory ImportCandidate.fromJson(Map<String, dynamic> row) => ImportCandidate(
+    itemId: row['item_id'] as String,
+    type: row['candidate_type'] as String,
+    date: row['transaction_date'] as String,
+    source: row['source'] as String,
+    description: row['raw_description'] as String?,
+    rowNumber: row['candidate_row'] as int?,
   );
 }
 
@@ -163,6 +209,7 @@ abstract interface class ImportsRepository {
     String expectedUserId, {
     String? password,
   });
+  Future<void> resolveDuplicate(String itemId, String decision);
   Future<void> confirm(String id);
   Future<void> cancel(String id);
 }
@@ -175,7 +222,7 @@ class SupabaseImportsRepository implements ImportsRepository {
     final rows = await client
         .from('import_batches')
         .select(
-          'id,account_id,account_currency,original_filename,status,row_count,error_count,imported_count,errors,created_at,format,period_start,period_end',
+          'id,account_id,account_currency,original_filename,status,row_count,error_count,imported_count,duplicate_count,errors,created_at,format,period_start,period_end',
         )
         .order('created_at', ascending: false)
         .order('id');
@@ -187,20 +234,39 @@ class SupabaseImportsRepository implements ImportsRepository {
     final row = await client
         .from('import_batches')
         .select(
-          'id,account_id,account_currency,original_filename,status,row_count,error_count,imported_count,errors,created_at,format,period_start,period_end',
+          'id,account_id,account_currency,original_filename,status,row_count,error_count,imported_count,duplicate_count,errors,created_at,format,period_start,period_end',
         )
         .eq('id', id)
         .single();
     final items = await client
         .from('import_item_details')
         .select(
-          'row_number,transaction_date,transaction_type,amount,currency,account_amount,category_name,raw_description,commission_amount',
+          'id,row_number,transaction_date,transaction_type,amount,currency,account_amount,category_name,raw_description,commission_amount,duplicate_decision,candidate_signature,duplicate_signature',
         )
         .eq('batch_id', id)
         .order('row_number');
+    final candidates = await client
+        .from('import_duplicate_candidates')
+        .select(
+          'item_id,candidate_type,transaction_date,raw_description,source,candidate_row',
+        )
+        .eq('batch_id', id)
+        .order('transaction_date');
+    final parsed = candidates
+        .map(ImportCandidate.fromJson)
+        .toList(growable: false);
     return ImportDetail(
       ImportBatch.fromJson(row),
-      items.map(ImportRow.fromJson).toList(growable: false),
+      items
+          .map(
+            (item) => ImportRow.fromJson(
+              item,
+              parsed
+                  .where((c) => c.itemId == item['id'])
+                  .toList(growable: false),
+            ),
+          )
+          .toList(growable: false),
     );
   }
 
@@ -237,6 +303,14 @@ class SupabaseImportsRepository implements ImportsRepository {
         'Не удалось подготовить импорт. Проверьте подключение.',
       );
     }
+  }
+
+  @override
+  Future<void> resolveDuplicate(String itemId, String decision) async {
+    await client.rpc(
+      'resolve_import_duplicate',
+      params: {'p_item_id': itemId, 'p_decision': decision},
+    );
   }
 
   @override

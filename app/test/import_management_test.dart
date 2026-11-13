@@ -48,7 +48,8 @@ class TestPicker implements StatementFilePicker {
 
 class MemoryImports implements ImportsRepository {
   String status = 'ready', format = 'cashradar_csv_v1';
-  bool prepared = false, duplicate = false;
+  bool prepared = false, duplicate = false, hasCandidate = false;
+  String? reviewDecision;
   int confirms = 0, cancellations = 0;
   String? submittedOwner, submittedAccount, submittedPassword;
   ImportBatch get batch => ImportBatch(
@@ -74,7 +75,22 @@ class MemoryImports implements ImportsRepository {
     status == 'cancelled'
         ? []
         : [
-            const ImportRow(
+            ImportRow(
+              id: 'item',
+              candidates: hasCandidate
+                  ? [
+                      const ImportCandidate(
+                        itemId: 'item',
+                        type: 'transaction',
+                        date: '2026-11-10',
+                        source: 'manual',
+                        description: 'Покупка',
+                      ),
+                    ]
+                  : const [],
+              candidateSignature: hasCandidate ? 'signature' : null,
+              duplicateDecision: reviewDecision,
+              duplicateSignature: reviewDecision == null ? null : 'signature',
               rowNumber: 2,
               date: '2026-11-11',
               type: 'expense',
@@ -98,6 +114,11 @@ class MemoryImports implements ImportsRepository {
     submittedPassword = password;
     prepared = true;
     return PrepareResult('batch', duplicate);
+  }
+
+  @override
+  Future<void> resolveDuplicate(String itemId, String decision) async {
+    reviewDecision = decision == 'clear' ? null : decision;
   }
 
   @override
@@ -216,6 +237,37 @@ void main() {
       expect(find.text('Пароль от файла ACBA'), findsNothing);
     },
   );
+  testWidgets('requires explicit review of a possible duplicate', (
+    tester,
+  ) async {
+    imports.hasCandidate = true;
+    await open(tester);
+    await prepare(tester);
+    expect(
+      find.text('Возможное совпадение — проверьте строку'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Подтвердить импорт'),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.ensureVisible(find.text('Пропустить строку'));
+    await tester.tap(find.text('Пропустить строку'));
+    await tester.pumpAndSettle();
+    expect(find.text('Решение: пропустить'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Подтвердить импорт'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
   testWidgets('labels Ameria XLSX in the preview', (tester) async {
     imports.format = 'ameria_xlsx_v1';
     await open(tester);
@@ -230,7 +282,11 @@ void main() {
     await prepare(tester);
     expect(find.text('Строка 2: Ошибка суммы.'), findsOneWidget);
     expect(find.text('Подтвердить импорт'), findsNothing);
-    await tester.ensureVisible(find.text('Отменить подготовку'));
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Отменить подготовку')),
+      alignment: 0.3,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Отменить подготовку'));
     await tester.pumpAndSettle();
     await tester.tap(

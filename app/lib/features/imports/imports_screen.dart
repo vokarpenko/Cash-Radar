@@ -145,7 +145,44 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
     }
   }
 
-  Future<void> _apply(ImportBatch batch, {required bool cancel}) async {
+  Future<void> _resolve(ImportRow row, String decision, String batchId) async {
+    final version = _sessionVersion;
+    final owner = _navigation.userId;
+    if (row.id == null || owner == null) return;
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(importsRepositoryProvider)
+          .resolveDuplicate(row.id!, decision);
+      if (mounted &&
+          version == _sessionVersion &&
+          owner == _navigation.userId) {
+        ref.invalidate(importDetailProvider(batchId));
+      }
+    } catch (_) {
+      if (mounted &&
+          version == _sessionVersion &&
+          owner == _navigation.userId) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Не удалось сохранить решение. Обновите предпросмотр.',
+            ),
+          ),
+        );
+        ref.invalidate(importDetailProvider(batchId));
+      }
+    } finally {
+      if (mounted && version == _sessionVersion) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _apply(
+    ImportBatch batch, {
+    required bool cancel,
+    int skipped = 0,
+    int fees = 0,
+  }) async {
     final owner = _navigation.userId;
     final version = _sessionVersion;
     if (owner == null) return;
@@ -156,7 +193,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
         content: Text(
           cancel
               ? 'Подготовленные строки будут удалены. Оригинал останется в закрытом хранилище.'
-              : 'В счёт будут добавлены операции: ${batch.rowCount}. Повторное подтверждение не создаст копии.',
+              : 'Будет добавлено операций: ${batch.rowCount - skipped + fees}, из них комиссий: $fees. Пропущено строк: $skipped.',
         ),
         actions: [
           TextButton(
@@ -432,10 +469,12 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
             final account = accounts.asData?.value
                 .where((a) => a.id == batch.accountId)
                 .firstOrNull;
-            final canConfirm =
+            final accountAvailable =
                 account != null &&
                 account.isActive &&
                 account.currency == batch.accountCurrency;
+            final canConfirm =
+                accountAvailable && data.rows.every((r) => !r.needsReview);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -458,12 +497,16 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                 ),
                 if (batch.periodStart != null && batch.periodEnd != null)
                   Text('Период: ${batch.periodStart} — ${batch.periodEnd}'),
-                if (batch.status == 'ready' && !canConfirm)
+                if (batch.status == 'ready' && !accountAvailable)
                   const Text(
                     'Подтверждение недоступно: счёт архивирован, недоступен или его валюта изменилась.',
                   ),
+                if (batch.status == 'ready' && accountAvailable && !canConfirm)
+                  const Text(
+                    'Для подтверждения проверьте решения по возможным совпадениям.',
+                  ),
                 Text(
-                  'Корректных строк: ${batch.rowCount} · ошибок: ${batch.errorCount} · импортировано: ${batch.importedCount}',
+                  'Корректных строк: ${batch.rowCount} · ошибок: ${batch.errorCount} · импортировано: ${batch.importedCount} · пропущено: ${batch.duplicateCount}',
                 ),
                 if (batch.status == 'invalid')
                   const Padding(
@@ -504,6 +547,46 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                         Text(
                           '${row.type == 'income' ? '+' : '−'}${Money.displayStored(row.amount)} ${row.currency}',
                         ),
+                        if (batch.status == 'ready' &&
+                            (row.candidates.isNotEmpty ||
+                                row.duplicateDecision != null)) ...[
+                          Text(
+                            row.needsReview
+                                ? 'Возможное совпадение — проверьте строку'
+                                : 'Решение: ${row.duplicateDecision == 'skip' ? 'пропустить' : 'импортировать'}',
+                          ),
+                          for (final candidate in row.candidates)
+                            Text(
+                              candidate.type == 'file'
+                                  ? 'В этом файле: строка ${candidate.rowNumber} · ${candidate.date} · ${candidate.description ?? ''}'
+                                  : 'В операциях: ${candidate.date} · ${candidate.description ?? ''} · ${candidate.source == 'manual' ? 'вручную' : 'выписка'}',
+                            ),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              if (row.candidates.isNotEmpty) ...[
+                                TextButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _resolve(row, 'skip', batch.id),
+                                  child: const Text('Пропустить строку'),
+                                ),
+                                TextButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _resolve(row, 'keep', batch.id),
+                                  child: const Text('Импортировать строку'),
+                                ),
+                              ] else
+                                TextButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _resolve(row, 'clear', batch.id),
+                                  child: const Text('Сбросить решение'),
+                                ),
+                            ],
+                          ),
+                        ],
                         if (row.commissionAmount != null)
                           Text(
                             'Комиссия: −${Money.displayStored(row.commissionAmount!)} ${batch.accountCurrency} · отдельная операция',
@@ -530,7 +613,20 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                       FilledButton(
                         onPressed: _busy || !canConfirm
                             ? null
-                            : () => _apply(batch, cancel: false),
+                            : () => _apply(
+                                batch,
+                                cancel: false,
+                                skipped: data.rows
+                                    .where((r) => r.duplicateDecision == 'skip')
+                                    .length,
+                                fees: data.rows
+                                    .where(
+                                      (r) =>
+                                          r.duplicateDecision != 'skip' &&
+                                          r.commissionAmount != null,
+                                    )
+                                    .length,
+                              ),
                         child: const Text('Подтвердить импорт'),
                       ),
                     if (batch.status == 'ready' || batch.status == 'invalid')
