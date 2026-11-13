@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
       throw new Problem(401, "Войдите в аккаунт заново.");
     }
     userId = user.id;
-    if (Number(req.headers.get("content-length") ?? "0") > 4096 || !req.body) {
+    if (Number(req.headers.get("content-length") ?? "0") > 16384 || !req.body) {
       throw new Problem(400, "Некорректный запрос.");
     }
     const reader = req.body.getReader();
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         const { done, value } = await reader.read();
         if (done) break;
         total += value.length;
-        if (total > 4096) {
+        if (total > 16384) {
           await reader.cancel();
           throw new Problem(400, "Некорректный запрос.");
         }
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       !body || typeof body !== "object" || typeof body.batch_id !== "string" ||
       !uuid.test(body.batch_id) || !Array.isArray(body.groups) ||
       !body.groups.length || body.groups.length > MAX_GROUPS
-    ) throw new Problem(400, "Выберите до 10 названий.");
+    ) throw new Problem(400, "Выберите до 25 названий.");
     const selected = body.groups as Array<Record<string, unknown>>;
     if (
       selected.some((x) =>
@@ -138,7 +138,30 @@ Deno.serve(async (req) => {
       }
       return { groupId: row.group_id, merchant: row.merchant, kind: row.kind };
     });
-    const result = await queryGemini(key, groups);
+    const gateRpc = async (name: string, model: string): Promise<unknown> => {
+      const result = await fetch(`${url}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: serviceHeaders,
+        body: JSON.stringify({ p_model: model }),
+      });
+      if (!result.ok) {
+        throw new Problem(503, "Не удалось проверить лимиты Gemini.");
+      }
+      return await result.json();
+    };
+    const gate = {
+      claim: async (model: string) => {
+        const wait = await gateRpc("ai_claim_model", model);
+        if (typeof wait !== "number" || !Number.isFinite(wait)) {
+          throw new Problem(503, "Не удалось проверить лимиты Gemini.");
+        }
+        return wait;
+      },
+      limited: async (model: string) => {
+        await gateRpc("ai_pause_model", model);
+      },
+    };
+    const result = await queryGemini(key, groups, fetch, gate);
     const save = await fetch(`${url}/rest/v1/rpc/ai_store_results`, {
       method: "POST",
       headers: serviceHeaders,

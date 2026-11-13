@@ -66,7 +66,7 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
     final entries = _candidates!
         .where((c) => _selected.contains(c['group_id']))
         .toList();
-    if (entries.isEmpty || entries.length > 10 || !_sameUser) return;
+    if (entries.isEmpty || entries.length > 25 || !_sameUser) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -138,9 +138,9 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
             rows
                     .where((c) => isEligibleAiName(c['merchant'] as String))
                     .length >
-                10)
+                25)
           const Text(
-            'За один запрос можно отправить до 10 названий; остальные будут доступны следующим пакетом.',
+            'За один запрос можно отправить до 25 названий; остальные будут доступны следующим пакетом.',
           ),
         if (rows != null)
           for (final c in rows)
@@ -154,7 +154,7 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
               onChanged: _busy || !isEligibleAiName(c['merchant'] as String)
                   ? null
                   : (value) => setState(() {
-                      if (value == true && _selected.length < 10) {
+                      if (value == true && _selected.length < 25) {
                         _selected.add(c['group_id'] as String);
                       }
                       if (value == false) {
@@ -168,7 +168,7 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
             child: Text(
               _busy
                   ? 'Обработка…'
-                  : 'Отправить выбранные (${_selected.length}/10)',
+                  : 'Отправить выбранные (${_selected.length}/25)',
             ),
           ),
         TextButton(

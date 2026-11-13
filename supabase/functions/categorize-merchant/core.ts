@@ -2,8 +2,14 @@
 // an ephemeral group index. Account/transaction identifiers never leave Supabase.
 export const PRIMARY_MODEL = "gemini-4-hydrogen";
 export const FALLBACK_MODEL = "gemini-3.8-flash";
+export const MODELS = [
+  PRIMARY_MODEL,
+  FALLBACK_MODEL,
+  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
+] as const;
 export const PROMPT_VERSION = "merchant-category-v1";
-export const MAX_GROUPS = 10;
+export const MAX_GROUPS = 25;
 export const CATEGORIES = [
   "groceries",
   "restaurants",
@@ -147,6 +153,13 @@ export async function queryGemini(
   apiKey: string,
   groups: Group[],
   fetcher: typeof fetch = fetch,
+  gate: {
+    claim(model: string): Promise<number>;
+    limited(model: string): Promise<void>;
+  } = {
+    claim: async () => 0,
+    limited: async () => {},
+  },
 ): Promise<{ model: string; suggestions: Suggestion[] }> {
   if (!apiKey) throw new CategorizationError("Ключ Gemini не настроен.");
   const { prompt } = preparePrompt(groups);
@@ -166,10 +179,10 @@ export async function queryGemini(
             generationConfig: {
               responseMimeType: "application/json",
               responseJsonSchema: responseSchema,
-              ...(model === FALLBACK_MODEL
+              ...(model !== PRIMARY_MODEL
                 ? { thinkingConfig: { thinkingLevel: "LOW" } }
                 : { temperature: 0 }),
-              maxOutputTokens: 2048,
+              maxOutputTokens: 4096,
             },
           }),
         },
@@ -180,15 +193,37 @@ export async function queryGemini(
       );
     }
   };
-  let model = PRIMARY_MODEL;
-  let response = await request(model);
-  if (response.status === 429) {
-    model = FALLBACK_MODEL;
+  let model: string = PRIMARY_MODEL;
+  let response: Response | undefined;
+  for (const candidate of MODELS) {
+    let wait = await gate.claim(candidate);
+    if (wait < 0) continue;
+    let attempts = 0;
+    while (wait > 0 && attempts++ < 3) {
+      if (wait > 15000) {
+        throw new CategorizationError(
+          "Слишком много запросов. Повторите позже.",
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      wait = await gate.claim(candidate);
+    }
+    if (wait < 0) continue;
+    if (wait > 0) {
+      throw new CategorizationError("Слишком много запросов. Повторите позже.");
+    }
+    model = candidate;
     response = await request(model);
+    if (response.status === 429) {
+      await gate.limited(model);
+      response = undefined;
+      continue;
+    }
+    break;
   }
-  if (response.status === 429) {
+  if (!response) {
     throw new CategorizationError(
-      "Лимит обеих моделей Gemini исчерпан. Повторите позже.",
+      "Лимит всех моделей Gemini исчерпан. Повторите позже.",
     );
   }
   if (!response.ok) {

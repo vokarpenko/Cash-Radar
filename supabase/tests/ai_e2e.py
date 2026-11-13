@@ -68,7 +68,7 @@ try:
     code, _ = request('/functions/v1/categorize-merchant','POST',{'batch_id':batch,'groups':[dict(selected, merchant='Different imaginary merchant')]},token=token)
     require(code == 409, 'Changed preview name was accepted')
     code, result = request('/functions/v1/categorize-merchant','POST',{'batch_id':batch,'groups':[selected]},token=token)
-    require(code == 200 and isinstance(result.get('rules'),int) and isinstance(result.get('suggestions'),int) and isinstance(result.get('unrecognized'),int) and result.get('model') in ('gemini-4-hydrogen','gemini-3.8-flash'), f'Synthetic AI request failed: HTTP {code}, {result.get("error", "unknown") if isinstance(result, dict) else "unknown"}')
+    require(code == 200 and isinstance(result.get('rules'),int) and isinstance(result.get('suggestions'),int) and isinstance(result.get('unrecognized'),int) and result.get('model') in ('gemini-4-hydrogen','gemini-3.8-flash','gemini-3.6-flash','gemini-3.5-flash-lite'), f'Synthetic AI request failed: HTTP {code}, {result.get("error", "unknown") if isinstance(result, dict) else "unknown"}')
     if result['rules'] or result['suggestions'] or result['unrecognized']:
         code, _ = request('/functions/v1/categorize-merchant','POST',{'batch_id':batch,'groups':[selected]},token=token)
         require(code == 409, 'Known merchant was eligible for another request')

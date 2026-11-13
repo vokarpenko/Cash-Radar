@@ -30,6 +30,6 @@ bool isEligibleAiName(String name) {
 Set<String> initiallySelectedAiGroups(List<Map<String, dynamic>> candidates) =>
     candidates
         .where((c) => isEligibleAiName(c['merchant'] as String))
-        .take(10)
+        .take(25)
         .map((c) => c['group_id'] as String)
         .toSet();

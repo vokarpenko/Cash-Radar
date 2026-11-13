@@ -133,7 +133,7 @@ Deno.test("other errors do not cause a fallback request", async () => {
   }
   assert(calls === 1);
 });
-Deno.test("limit on both models stops after two calls", async () => {
+Deno.test("limit on all models stops after four calls", async () => {
   let calls = 0;
   const fake = (async () => {
     calls++;
@@ -143,7 +143,53 @@ Deno.test("limit on both models stops after two calls", async () => {
     await queryGemini("local-test-secret", groups, fake);
     throw Error("should fail");
   } catch (e) {
-    assert(e instanceof Error && e.message.includes("обеих"));
+    assert(e instanceof Error && e.message.includes("всех"));
   }
-  assert(calls === 2);
+  assert(calls === 4);
+});
+
+Deno.test("429 pauses models and subsequent calls skip them", async () => {
+  const paused = new Set<string>();
+  const gate = {
+    claim: async (model: string) => paused.has(model) ? -1 : 0,
+    limited: async (model: string) => {
+      paused.add(model);
+    },
+  };
+  const urls: string[] = [];
+  const fake = (async (url: string | URL | Request) => {
+    const u = String(url);
+    urls.push(u);
+    if (!u.includes("gemini-3.5-flash-lite")) {
+      return new Response("limit", { status: 429 });
+    }
+    return new Response(
+      JSON.stringify({
+        candidates: [{
+          finishReason: "STOP",
+          content: { parts: [{ text: JSON.stringify(good) }] },
+        }],
+      }),
+      { status: 200 },
+    );
+  }) as typeof fetch;
+  const first = await queryGemini("local-test-secret", groups, fake, gate);
+  assert(
+    first.model === "gemini-3.5-flash-lite" && urls.length === 4 &&
+      paused.size === 3,
+  );
+  const second = await queryGemini("local-test-secret", groups, fake, gate);
+  assert(second.model === "gemini-3.5-flash-lite" && urls.length === 5);
+});
+Deno.test("supports 25 groups and rejects 26", () => {
+  const rows = Array.from(
+    { length: 26 },
+    (_, i) => ({
+      groupId: String(i),
+      merchant: "Imaginary Shop",
+      kind: "expense" as const,
+    }),
+  );
+  assert(preparePrompt(rows.slice(0, 25)).inputs.length === 25);
+  fail(() => preparePrompt(rows));
 });

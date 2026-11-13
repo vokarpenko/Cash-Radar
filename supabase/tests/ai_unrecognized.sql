@@ -16,6 +16,18 @@ select set_config('test.unknown',(select group_id from private.ai_candidates('94
  set_config('test.grocer',(select group_id from private.ai_candidates('94000000-0000-4000-8000-000000000001',current_setting('test.batch')::uuid) where merchant='Imaginary Grocer'),true),
  set_config('test.vague',(select group_id from private.ai_candidates('94000000-0000-4000-8000-000000000001',current_setting('test.batch')::uuid) where merchant='Imaginary Vague'),true);
 select public.ai_reserve('94000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000001');
+do $$ declare payload jsonb; begin
+ select jsonb_agg('{}'::jsonb) into payload from generate_series(1,25);
+ perform public.ai_store_results('94000000-0000-4000-8000-000000000001',current_setting('test.batch')::uuid,'96000000-0000-4000-8000-000000000001',payload,'gemini-3.5-flash-lite');
+ select jsonb_agg('{}'::jsonb) into payload from generate_series(1,26);
+ begin
+  perform public.ai_store_results('94000000-0000-4000-8000-000000000001',current_setting('test.batch')::uuid,'96000000-0000-4000-8000-000000000001',payload,'gemini-3.5-flash-lite');
+  raise exception '26 results incorrectly accepted';
+ exception when others then
+  if sqlerrm <> 'Invalid results' then raise; end if;
+ end;
+end $$;
+
 select public.ai_store_results('94000000-0000-4000-8000-000000000001',current_setting('test.batch')::uuid,'96000000-0000-4000-8000-000000000001',jsonb_build_array(
  jsonb_build_object('groupId',current_setting('test.unknown'),'category','unknown','confidence',0.0,'unambiguous',false,'reason','unknown'),
  jsonb_build_object('groupId',current_setting('test.grocer'),'category','groceries','confidence',0.95,'unambiguous',true,'reason','clear'),

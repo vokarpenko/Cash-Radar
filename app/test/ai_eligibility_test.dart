@@ -17,16 +17,19 @@ void main() {
       expect(isEligibleAiName(name), isFalse, reason: name);
     }
   });
-  test('preselects at most ten eligible groups and skips identifiers', () {
-    final rows = [
-      {'group_id': 'private', 'merchant': 'card 1234'},
-      for (var i = 0; i < 12; i++)
-        {'group_id': 'group-$i', 'merchant': 'Public Shop'},
-    ];
-    final selected = initiallySelectedAiGroups(rows);
-    expect(selected.length, 10);
-    expect(selected, contains('group-0'));
-    expect(selected, isNot(contains('group-10')));
-    expect(selected, isNot(contains('private')));
-  });
+  test(
+    'preselects at most twenty-five eligible groups and skips identifiers',
+    () {
+      final rows = [
+        {'group_id': 'private', 'merchant': 'card 1234'},
+        for (var i = 0; i < 27; i++)
+          {'group_id': 'group-$i', 'merchant': 'Public Shop'},
+      ];
+      final selected = initiallySelectedAiGroups(rows);
+      expect(selected.length, 25);
+      expect(selected, contains('group-0'));
+      expect(selected, isNot(contains('group-25')));
+      expect(selected, isNot(contains('private')));
+    },
+  );
 }
