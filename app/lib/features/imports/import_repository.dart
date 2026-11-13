@@ -132,6 +132,7 @@ class ImportRow {
     this.duplicateDecision,
     this.candidateSignature,
     this.duplicateSignature,
+    this.categorizationSource,
   });
   final int rowNumber;
   final String date, type, amount, currency, accountAmount, category;
@@ -140,7 +141,8 @@ class ImportRow {
       id,
       duplicateDecision,
       candidateSignature,
-      duplicateSignature;
+      duplicateSignature,
+      categorizationSource;
   final List<ImportCandidate> candidates;
   bool get needsReview => candidates.isNotEmpty
       ? duplicateDecision == null || candidateSignature != duplicateSignature
@@ -154,6 +156,7 @@ class ImportRow {
     duplicateDecision: row['duplicate_decision'] as String?,
     candidateSignature: row['candidate_signature'] as String?,
     duplicateSignature: row['duplicate_signature'] as String?,
+    categorizationSource: row['categorization_source'] as String?,
     rowNumber: row['row_number'] as int,
     date: row['transaction_date'] as String,
     type: row['transaction_type'] as String,
@@ -210,6 +213,7 @@ abstract interface class ImportsRepository {
     String? password,
   });
   Future<void> resolveDuplicate(String itemId, String decision);
+  Future<void> reapplyCategories(String batchId);
   Future<void> confirm(String id);
   Future<void> cancel(String id);
 }
@@ -241,7 +245,7 @@ class SupabaseImportsRepository implements ImportsRepository {
     final items = await client
         .from('import_item_details')
         .select(
-          'id,row_number,transaction_date,transaction_type,amount,currency,account_amount,category_name,raw_description,commission_amount,duplicate_decision,candidate_signature,duplicate_signature',
+          'id,row_number,transaction_date,transaction_type,amount,currency,account_amount,category_name,raw_description,commission_amount,duplicate_decision,candidate_signature,duplicate_signature,categorization_source',
         )
         .eq('batch_id', id)
         .order('row_number');
@@ -303,6 +307,14 @@ class SupabaseImportsRepository implements ImportsRepository {
         'Не удалось подготовить импорт. Проверьте подключение.',
       );
     }
+  }
+
+  @override
+  Future<void> reapplyCategories(String batchId) async {
+    await client.rpc(
+      'reapply_import_categories',
+      params: {'p_batch_id': batchId},
+    );
   }
 
   @override

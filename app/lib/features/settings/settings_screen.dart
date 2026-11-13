@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/auth_navigation.dart';
 import '../accounts/money.dart';
+import '../categorization/rules_screen.dart';
 import 'currency_repository.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -93,6 +94,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             if (v != null && v != value) _setCurrency(v);
                           },
                   ),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.rule),
+                title: const Text('Правила категорий'),
+                subtitle: const Text(
+                  'Названия, алиасы, MCC и запомненные исправления',
+                ),
+                onTap: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const RulesDialog(),
                 ),
               ),
               const Divider(height: 1),

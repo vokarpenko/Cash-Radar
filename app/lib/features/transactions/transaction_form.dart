@@ -226,6 +226,13 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                           }),
                   ),
                 ),
+                if (widget.transaction != null)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'При изменении категории выбор запомнится для такого же названия, если оно достаточно длинное. Управление — в настройках.',
+                    ),
+                  ),
                 categories.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(12),

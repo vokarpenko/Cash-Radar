@@ -117,6 +117,9 @@ class MemoryImports implements ImportsRepository {
   }
 
   @override
+  Future<void> reapplyCategories(String batchId) async {}
+
+  @override
   Future<void> resolveDuplicate(String itemId, String decision) async {
     reviewDecision = decision == 'clear' ? null : decision;
   }

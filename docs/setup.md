@@ -121,6 +121,8 @@ docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
   -v ON_ERROR_STOP=1 < supabase/tests/statement_imports.sql
 docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
   -v ON_ERROR_STOP=1 < supabase/tests/deduplication.sql
+docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/categorization.sql
 python3 supabase/tests/import_e2e.py
 ```
 

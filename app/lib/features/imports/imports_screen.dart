@@ -145,6 +145,32 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
     }
   }
 
+  Future<void> _reapplyCategories(String batchId) async {
+    final owner = _navigation.userId, version = _sessionVersion;
+    if (owner == null || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(importsRepositoryProvider).reapplyCategories(batchId);
+      if (mounted &&
+          version == _sessionVersion &&
+          owner == _navigation.userId) {
+        ref.invalidate(importDetailProvider(batchId));
+      }
+    } catch (_) {
+      if (mounted &&
+          version == _sessionVersion &&
+          owner == _navigation.userId) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось применить правила. Повторите попытку.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted && version == _sessionVersion) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _resolve(ImportRow row, String decision, String batchId) async {
     final version = _sessionVersion;
     final owner = _navigation.userId;
@@ -544,6 +570,17 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                         Text(
                           'Строка ${row.rowNumber} · ${row.date} · ${row.category}',
                         ),
+                        if (row.categorizationSource != null)
+                          Text(
+                            'Категория: ${switch (row.categorizationSource) {
+                              'rule' => 'правило',
+                              'alias' => 'алиас',
+                              'mcc' => 'MCC',
+                              'history' => 'предыдущее исправление',
+                              'fallback' => 'по умолчанию',
+                              _ => 'вручную',
+                            }}',
+                          ),
                         Text(
                           '${row.type == 'income' ? '+' : '−'}${Money.displayStored(row.amount)} ${row.currency}',
                         ),
@@ -609,6 +646,14 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (batch.status == 'ready' &&
+                        batch.format != 'cashradar_csv_v1')
+                      TextButton(
+                        onPressed: _busy
+                            ? null
+                            : () => _reapplyCategories(batch.id),
+                        child: const Text('Применить правила категорий'),
+                      ),
                     if (batch.status == 'ready')
                       FilledButton(
                         onPressed: _busy || !canConfirm
