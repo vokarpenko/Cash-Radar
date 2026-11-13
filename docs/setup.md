@@ -140,6 +140,8 @@ docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
   -v ON_ERROR_STOP=1 < supabase/tests/ai_unrecognized.sql
 docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
   -v ON_ERROR_STOP=1 < supabase/tests/ai_model_quotas.sql
+docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/delivery_category.sql
 python3 supabase/tests/ai_e2e.py
 ```
 
