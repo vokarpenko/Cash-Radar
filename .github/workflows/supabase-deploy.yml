@@ -43,13 +43,15 @@ jobs:
           deno-version: v2.x
       - name: Check and test parsers and categorization
         run: |
-          deno check supabase/functions/categorize-merchant/index.ts
+          deno check supabase/functions/categorize-merchant/index.ts supabase/functions/gmail-collector/index.ts
           deno test --allow-read \
             supabase/tests/import_parser_test.ts \
             supabase/tests/ameria_parser_test.ts \
             supabase/tests/acba_parser_test.ts \
             supabase/tests/alfa_parser_test.ts \
-            supabase/tests/ai_categorization_test.ts
+            supabase/tests/ai_categorization_test.ts \
+            supabase/tests/gmail_transport_test.ts \
+            supabase/tests/gmail_poll_test.ts
 
   database-tests:
     name: Local database migration and SQL tests
@@ -62,19 +64,23 @@ jobs:
       - uses: supabase/setup-cli@v3
         with:
           version: 3.1.0
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Start isolated local Supabase and apply migrations
         run: supabase start --exclude studio,imgproxy,edge-runtime,logflare,vector,postgres-meta
       - name: Test database rules and user isolation
         shell: bash
         run: |
           set -euo pipefail
-          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category internal_transfers alfa_import alfa_categories; do
+          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category internal_transfers alfa_import alfa_categories gmail_collector; do
             echo "Testing ${test}"
             docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
               -v ON_ERROR_STOP=1 < "supabase/tests/${test}.sql"
           done
           python3 supabase/tests/transfer_concurrency.py
           python3 supabase/tests/transfer_api_e2e.py
+          python3 scripts/test_local_gmail.py
 
   deploy:
     name: Deploy production Supabase
@@ -124,5 +130,7 @@ jobs:
           fi
       - name: Deploy statement import
         run: supabase functions deploy import-statement --remote="$PROJECT_REF" --use-api --yes
+      - name: Deploy Gmail collector
+        run: supabase functions deploy gmail-collector --remote="$PROJECT_REF" --use-api --yes
       - name: Deploy AI categorization
         run: supabase functions deploy categorize-merchant --remote="$PROJECT_REF" --use-api --yes

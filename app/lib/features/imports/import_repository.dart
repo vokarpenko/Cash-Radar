@@ -212,8 +212,22 @@ class PrepareResult {
   final bool duplicate;
 }
 
+class GmailActivity {
+  const GmailActivity({
+    this.lastRun,
+    this.errorCode,
+    this.scanned = 0,
+    this.prepared = 0,
+    this.failed = 0,
+    this.failedAttachments = 0,
+  });
+  final String? lastRun, errorCode;
+  final int scanned, prepared, failed, failedAttachments;
+}
+
 abstract interface class ImportsRepository {
   Future<List<ImportBatch>> loadBatches();
+  Future<GmailActivity> loadGmailActivity(String userId);
   Future<ImportDetail> loadDetail(String id);
   Future<PrepareResult> prepare(
     String accountId,
@@ -230,6 +244,33 @@ abstract interface class ImportsRepository {
 class SupabaseImportsRepository implements ImportsRepository {
   SupabaseImportsRepository(this.client);
   final SupabaseClient client;
+  @override
+  Future<GmailActivity> loadGmailActivity(String userId) async {
+    if (userId.isEmpty) return const GmailActivity();
+    final runs = await client
+        .from('gmail_collector_runs')
+        .select('created_at,scanned,prepared,failed,error_code')
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .limit(1);
+    final failures = await client
+        .from('gmail_import_jobs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'failed')
+        .limit(100);
+    if (runs.isEmpty) return GmailActivity(failedAttachments: failures.length);
+    final run = runs.first;
+    return GmailActivity(
+      lastRun: run['created_at'] as String?,
+      errorCode: run['error_code'] as String?,
+      scanned: run['scanned'] as int,
+      prepared: run['prepared'] as int,
+      failed: run['failed'] as int,
+      failedAttachments: failures.length,
+    );
+  }
+
   @override
   Future<List<ImportBatch>> loadBatches() async {
     final rows = await client
@@ -361,6 +402,14 @@ final importBatchesProvider = FutureProvider.autoDispose<List<ImportBatch>>(
 final importDetailProvider = FutureProvider.autoDispose
     .family<ImportDetail, String>(
       (ref, id) => ref.watch(importsRepositoryProvider).loadDetail(id),
+      dependencies: [importsRepositoryProvider],
+      retry: (_, _) => null,
+    );
+
+final gmailActivityProvider = FutureProvider.autoDispose
+    .family<GmailActivity, String>(
+      (ref, userId) =>
+          ref.watch(importsRepositoryProvider).loadGmailActivity(userId),
       dependencies: [importsRepositoryProvider],
       retry: (_, _) => null,
     );
