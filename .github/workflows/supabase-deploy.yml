@@ -1,0 +1,125 @@
+name: Verify and deploy Supabase
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter:
+    name: Flutter checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+      - name: Validate public web configuration
+        run: python3 scripts/test_web_config.py
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get --enforce-lockfile
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze --no-pub
+      - name: Test
+        working-directory: app
+        run: flutter test --no-pub
+
+  edge-tests:
+    name: Edge function tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check and test parsers and categorization
+        run: |
+          deno check supabase/functions/categorize-merchant/index.ts
+          deno test --allow-read \
+            supabase/tests/import_parser_test.ts \
+            supabase/tests/ameria_parser_test.ts \
+            supabase/tests/acba_parser_test.ts \
+            supabase/tests/ai_categorization_test.ts
+
+  database-tests:
+    name: Local database migration and SQL tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_EXPERIMENTAL_STACK: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 3.1.0
+      - name: Start isolated local Supabase and apply migrations
+        run: supabase start --exclude studio,imgproxy,edge-runtime,logflare,vector,postgres-meta
+      - name: Test database rules and user isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category; do
+            echo "Testing ${test}"
+            docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
+              -v ON_ERROR_STOP=1 < "supabase/tests/${test}.sql"
+          done
+
+  deploy:
+    name: Deploy production Supabase
+    needs: [flutter, edge-tests, database-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: cash-radar-supabase-production
+      cancel-in-progress: false
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_EXPERIMENTAL_STACK: '0'
+      GH_TOKEN: ${{ github.token }}
+      PROJECT_REF: mawljmoijqhcdbmszglq
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 3.1.0
+      - name: Verify credentials and current main commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo 'Set SUPABASE_ACCESS_TOKEN in GitHub Actions secrets.' >&2
+            exit 1
+          fi
+          current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          if [ "$current_sha" != "$GITHUB_SHA" ]; then
+            echo 'A newer main commit exists; do not deploy this older run.' >&2
+            exit 1
+          fi
+      - name: Review pending migrations
+        run: supabase db push --dry-run --remote="$PROJECT_REF"
+      - name: Apply migrations
+        run: supabase db push --remote="$PROJECT_REF" --yes
+      - name: Check main again before deploying functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          if [ "$current_sha" != "$GITHUB_SHA" ]; then
+            echo 'A newer main commit exists; let its run deploy the functions.' >&2
+            exit 1
+          fi
+      - name: Deploy statement import
+        run: supabase functions deploy import-statement --remote="$PROJECT_REF" --use-api --yes
+      - name: Deploy AI categorization
+        run: supabase functions deploy categorize-merchant --remote="$PROJECT_REF" --use-api --yes
