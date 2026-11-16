@@ -118,3 +118,29 @@ Deno.test("Gmail polling preserves cursor when runtime expires mid-page", async 
     stats.prepared === 0 && f.getSaved() === undefined && f.marked.length === 0,
   );
 });
+
+Deno.test("missing ACBA password does not stop other bank routes", async () => {
+  const f = fake();
+  const acba: Route = {
+    labelId: "Label_acba",
+    accountId: route.accountId,
+    bankCode: "acba_am",
+  };
+  f.mail.list = (label) =>
+    Promise.resolve({
+      ids: [label === "Label_acba" ? "acba_message" : "alfa_message"],
+    });
+  f.store.prepare = (r) =>
+    r.bankCode === "acba_am"
+      ? Promise.reject(new GmailError("acba_password_missing"))
+      : Promise.resolve({ batch: "batch_1" });
+  f.mail.mark = (id) => {
+    f.marked.push(id);
+    return Promise.resolve();
+  };
+  const stats = await poll(f.mail, f.store, [acba, route], "Label_done");
+  check(
+    stats.failed === 1 && stats.errorCode === "acba_password_missing" &&
+      stats.prepared === 1 && f.marked.join(",") === "alfa_message",
+  );
+});

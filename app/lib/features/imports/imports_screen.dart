@@ -344,7 +344,11 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                         'unsupported_attachment' =>
                           'В письме нет поддерживаемой XLSX-выписки или есть вложение другого формата.',
                         'unsupported_encrypted' =>
-                          'Защищённую выписку пока можно импортировать вручную.',
+                          'Защищённую выписку можно импортировать вручную.',
+                        'acba_password_missing' =>
+                          'Не настроен пароль выписки ACBA.',
+                        'acba_password_invalid' =>
+                          'Пароль выписки ACBA неверный. Обновите секрет.',
                         'invalid_attachment_size' =>
                           'Размер вложения недопустим: максимум 1 МиБ.',
                         'wrong_account' =>

@@ -9,6 +9,7 @@ export class Database implements Store {
     private base: string,
     private key: string,
     private user: string,
+    private acbaPassword?: string,
   ) {}
   private async request(
     path: string,
@@ -144,13 +145,16 @@ export class Database implements Store {
     bytes: Uint8Array,
     filename: string,
   ): Promise<{ batch: string }> {
-    // ACBA is deliberately disabled for the first version; no bank password is stored.
-    if (
-      bytes.length >= 8 &&
+    const encrypted = bytes.length >= 8 &&
       [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1].every((b, i) =>
         bytes[i] === b
-      )
-    ) throw new GmailError("unsupported_encrypted");
+      );
+    if (encrypted && route.bankCode !== "acba_am") {
+      throw new GmailError("unsupported_encrypted");
+    }
+    if (encrypted && (!this.acbaPassword || this.acbaPassword.length > 255)) {
+      throw new GmailError("acba_password_missing");
+    }
     let binary = "";
     for (let i = 0; i < bytes.length; i += 8192) {
       binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
@@ -162,10 +166,17 @@ export class Database implements Store {
         account_id: route.accountId,
         filename,
         file_base64: btoa(binary),
+        ...(encrypted ? { password: this.acbaPassword } : {}),
       }),
     });
     const response = await handleImport(req, this.user);
-    if (!response.ok) throw new GmailError("import_failed");
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (encrypted && data?.error === "Неверный пароль от выписки.") {
+        throw new GmailError("acba_password_invalid");
+      }
+      throw new GmailError("import_failed");
+    }
     const parsed = await response.json();
     if (typeof parsed.id !== "string" || !uuid.test(parsed.id)) {
       throw new GmailError("import_failed");

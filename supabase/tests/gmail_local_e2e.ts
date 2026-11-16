@@ -33,6 +33,13 @@ function assert(v: unknown, m: string): asserts v {
 const bytes = await Deno.readFile(
   new URL("./fixtures/alfa_synthetic.xlsx", import.meta.url),
 );
+const acbaBytes = await Deno.readFile(
+  new URL("./fixtures/acba_encrypted_synthetic.xlsx", import.meta.url),
+);
+const acbaHash = Array.from(
+  new Uint8Array(await crypto.subtle.digest("SHA-256", acbaBytes)),
+  (b) => b.toString(16).padStart(2, "0"),
+).join("");
 const hash = Array.from(
   new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
   (b) => b.toString(16).padStart(2, "0"),
@@ -124,24 +131,125 @@ try {
     logs.length === 1 && logs[0].scanned === 3,
     "collector run was not recorded",
   );
+  const acbaBank = await api("/rest/v1/banks?select=id&code=eq.acba_am");
+  const acbaAccountId = crypto.randomUUID();
+  await api("/rest/v1/accounts", "POST", {
+    id: acbaAccountId,
+    user_id: userId,
+    name: "Synthetic ACBA",
+    account_type: "bank",
+    currency: "AMD",
+    bank_id: acbaBank[0].id,
+    initial_balance: "0",
+  });
+  const acbaRoute: Route = {
+    labelId: "Label_acba",
+    accountId: acbaAccountId,
+    bankCode: "acba_am",
+  };
+  const wrong = new Database(base, key, userId, "incorrect-synthetic-password");
+  const good = new Database(base, key, userId, "synthetic-only");
+  await good.checkRoute(acbaRoute);
+  let missingPassword = false;
+  try {
+    await db.prepare(acbaRoute, acbaBytes, "acba.xlsx");
+  } catch (e) {
+    missingPassword = e instanceof Error &&
+      e.message === "acba_password_missing";
+  }
+  assert(missingPassword, "missing ACBA password was not detected");
+  const acbaMail: Mailbox = {
+    list: () => Promise.resolve({ ids: ["synthetic_acba"] }),
+    message: (id) =>
+      Promise.resolve({
+        id,
+        attachments: [{
+          partId: "0",
+          attachmentId: "synthetic_acba_attachment",
+          filename: "acba.xlsx",
+          size: acbaBytes.length,
+        }],
+      }),
+    attachment: () => Promise.resolve(acbaBytes),
+    mark: () => {
+      marks++;
+      return Promise.resolve();
+    },
+  };
+  const marksBefore = marks;
+  const failed = await poll(acbaMail, wrong, [acbaRoute], "Label_done");
+  assert(
+    failed.failed === 1 && failed.errorCode === "acba_password_invalid" &&
+      marks === marksBefore,
+    "wrong password did not block ACBA message",
+  );
+  const failedJob = await api(
+    `/rest/v1/gmail_import_jobs?select=id,error_code&user_id=eq.${userId}&status=eq.failed`,
+  );
+  assert(
+    failedJob.length === 1 &&
+      failedJob[0].error_code === "acba_password_invalid",
+    "wrong password error was not recorded safely",
+  );
+  await api(`/rest/v1/gmail_import_jobs?id=eq.${failedJob[0].id}`, "PATCH", {
+    updated_at: "2000-01-01T00:00:00Z",
+  });
+  const acbaResult = await poll(acbaMail, good, [acbaRoute], "Label_done");
+  assert(
+    acbaResult.prepared === 1 && acbaResult.marked === 1 &&
+      acbaResult.failed === 0,
+    "ACBA retry did not succeed",
+  );
+  const acbaBatches = await api(
+    `/rest/v1/import_batches?select=id,status,row_count,object_path&user_id=eq.${userId}&account_id=eq.${acbaAccountId}`,
+  );
+  assert(
+    acbaBatches.length === 1 && acbaBatches[0].status === "ready" &&
+      acbaBatches[0].row_count === 2,
+    "wrong ACBA preview",
+  );
+  const stored = await fetch(
+    base +
+      `/storage/v1/object/authenticated/statements/${userId}/${acbaHash}.xlsx`,
+    { headers },
+  );
+  assert(stored.ok, "encrypted original missing");
+  const storedBytes = new Uint8Array(await stored.arrayBuffer());
+  assert(
+    storedBytes.length === acbaBytes.length &&
+      storedBytes.every((b, i) => b === acbaBytes[i]),
+    "encrypted original was not preserved",
+  );
+  const safeJobs = await api(
+    `/rest/v1/gmail_import_jobs?select=*&user_id=eq.${userId}`,
+  );
+  assert(
+    !JSON.stringify(safeJobs).includes("synthetic-only"),
+    "password leaked into job records",
+  );
+  const allTransactions = await api(
+    `/rest/v1/transactions?select=id&user_id=eq.${userId}`,
+  );
+  assert(allTransactions.length === 0, "ACBA was automatically confirmed");
   let rejected = false;
   try {
-    await db.prepare(
-      route,
-      new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]),
-      "encrypted.xlsx",
-    );
+    await good.prepare(route, acbaBytes, "encrypted.xlsx");
   } catch {
     rejected = true;
   }
-  assert(rejected, "encrypted attachment was accepted");
+  assert(rejected, "encrypted statement accepted on wrong bank");
+  const retry = await poll(acbaMail, good, [acbaRoute], "Label_done");
+  assert(
+    retry.prepared === 0 && retry.failed === 0,
+    "repeated ACBA message was not idempotent",
+  );
   console.log(
-    "Local Gmail collector: synthetic preparation, duplicate delivery, private job state and no auto-confirmation passed.",
+    "Local Gmail collector: Alfa and encrypted ACBA, invalid-password retry, encrypted storage and duplicate delivery passed.",
   );
 } finally {
   if (created) {
     await api("/storage/v1/object/statements", "DELETE", {
-      prefixes: [`${userId}/${hash}.xlsx`],
+      prefixes: [`${userId}/${hash}.xlsx`, `${userId}/${acbaHash}.xlsx`],
     });
     await api(`/auth/v1/admin/users/${userId}`, "DELETE");
   }

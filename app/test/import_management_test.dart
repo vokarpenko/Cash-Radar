@@ -233,6 +233,24 @@ void main() {
     },
   );
 
+  testWidgets('shows an incorrect ACBA password without revealing it', (
+    tester,
+  ) async {
+    imports.gmailActivity = const GmailActivity(
+      lastRun: '2026-11-17T00:00:00Z',
+      errorCode: 'acba_password_invalid',
+      failed: 1,
+      failedAttachments: 1,
+    );
+    await open(tester);
+    await tester.tap(find.text('Выписки из Gmail'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Пароль выписки ACBA неверный. Обновите секрет.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('prepares a private preview and confirms once', (tester) async {
     await open(tester);
     await prepare(tester);

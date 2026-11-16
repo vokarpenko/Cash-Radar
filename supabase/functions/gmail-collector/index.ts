@@ -47,7 +47,8 @@ function config(): {
       typeof r.labelId !== "string" || !label.test(r.labelId) ||
       r.labelId === done || typeof r.accountId !== "string" ||
       !uuid.test(r.accountId) ||
-      (r.bankCode !== "ameria_am" && r.bankCode !== "alfa_ru")
+      (r.bankCode !== "ameria_am" && r.bankCode !== "alfa_ru" &&
+        r.bankCode !== "acba_am")
     ) throw new GmailError("not_configured");
     return { labelId: r.labelId, accountId: r.accountId, bankCode: r.bankCode };
   });
@@ -75,7 +76,12 @@ Deno.serve(async (req) => {
       !safeEqual(req.headers.get("authorization") ?? "", `Bearer ${service}`)
     ) return reply({ error: "unauthorized" }, 401);
     const cfg = config();
-    db = new Database(url, service, cfg.user);
+    const acbaPassword = cfg.routes.some((route) =>
+        route.bankCode === "acba_am"
+      )
+      ? Deno.env.get("GMAIL_ACBA_STATEMENT_PASSWORD")
+      : undefined;
+    db = new Database(url, service, cfg.user, acbaPassword);
     for (const route of cfg.routes) await db.checkRoute(route);
     const access = await refreshAccessToken({
       clientId: secret("GMAIL_CLIENT_ID"),

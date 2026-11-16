@@ -3,7 +3,7 @@ import { GmailError } from "./gmail.ts";
 export type Route = {
   labelId: string;
   accountId: string;
-  bankCode: "ameria_am" | "alfa_ru";
+  bankCode: "ameria_am" | "alfa_ru" | "acba_am";
 };
 export interface Mailbox {
   list(
@@ -58,6 +58,8 @@ export async function poll(
     "provider_unavailable",
     "unsupported_attachment",
     "unsupported_encrypted",
+    "acba_password_missing",
+    "acba_password_invalid",
     "wrong_account",
     "invalid_attachment",
     "invalid_attachment_size",

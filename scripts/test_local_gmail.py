@@ -13,4 +13,4 @@ if values.get('API_URL') != 'http://127.0.0.1:54321':
 env = os.environ.copy()
 env.update(SUPABASE_URL=values['API_URL'],SUPABASE_ANON_KEY=values['ANON_KEY'],SUPABASE_SERVICE_ROLE_KEY=values['SERVICE_ROLE_KEY'])
 deno = [shutil.which('deno')] if shutil.which('deno') else ['npx','--yes','deno@2']
-subprocess.run(deno+['run','--allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY','--allow-net=127.0.0.1:54321','--allow-read=supabase/tests/fixtures/alfa_synthetic.xlsx','supabase/tests/gmail_local_e2e.ts'],cwd=root,env=env,check=True)
+subprocess.run(deno+['run','--allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY','--allow-net=127.0.0.1:54321','--allow-read=supabase/tests/fixtures/alfa_synthetic.xlsx,supabase/tests/fixtures/acba_encrypted_synthetic.xlsx','supabase/tests/gmail_local_e2e.ts'],cwd=root,env=env,check=True)
