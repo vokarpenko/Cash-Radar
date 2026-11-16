@@ -19,6 +19,9 @@ class TransactionEntry {
     this.transferGroupId,
     this.transferFeeGroupId,
     this.updatedAt,
+    this.postingDate,
+    this.bankOperationCode,
+    this.originalAmountKnown = true,
   });
   final String id,
       accountId,
@@ -32,7 +35,13 @@ class TransactionEntry {
       accountAmount,
       accountCurrency;
   final bool accountActive;
-  final String? description, transferGroupId, transferFeeGroupId, updatedAt;
+  final String? description,
+      transferGroupId,
+      transferFeeGroupId,
+      updatedAt,
+      postingDate,
+      bankOperationCode;
+  final bool originalAmountKnown;
 
   factory TransactionEntry.fromJson(Map<String, dynamic> row) =>
       TransactionEntry(
@@ -52,6 +61,9 @@ class TransactionEntry {
         transferGroupId: row['transfer_group_id'] as String?,
         transferFeeGroupId: row['transfer_fee_group_id'] as String?,
         updatedAt: row['updated_at'] as String?,
+        postingDate: row['posting_date'] as String?,
+        bankOperationCode: row['bank_operation_code'] as String?,
+        originalAmountKnown: row['original_amount_known'] as bool? ?? true,
       );
 }
 

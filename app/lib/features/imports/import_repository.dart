@@ -133,6 +133,9 @@ class ImportRow {
     this.candidateSignature,
     this.duplicateSignature,
     this.categorizationSource,
+    this.postingDate,
+    this.bankOperationCode,
+    this.mcc,
   });
   final int rowNumber;
   final String date, type, amount, currency, accountAmount, category;
@@ -142,7 +145,10 @@ class ImportRow {
       duplicateDecision,
       candidateSignature,
       duplicateSignature,
-      categorizationSource;
+      categorizationSource,
+      postingDate,
+      bankOperationCode,
+      mcc;
   final List<ImportCandidate> candidates;
   bool get needsReview => candidates.isNotEmpty
       ? duplicateDecision == null || candidateSignature != duplicateSignature
@@ -157,6 +163,9 @@ class ImportRow {
     candidateSignature: row['candidate_signature'] as String?,
     duplicateSignature: row['duplicate_signature'] as String?,
     categorizationSource: row['categorization_source'] as String?,
+    postingDate: row['posting_date'] as String?,
+    bankOperationCode: row['bank_operation_code'] as String?,
+    mcc: row['mcc'] as String?,
     rowNumber: row['row_number'] as int,
     date: row['transaction_date'] as String,
     type: row['transaction_type'] as String,
@@ -245,7 +254,7 @@ class SupabaseImportsRepository implements ImportsRepository {
     final items = await client
         .from('import_item_details')
         .select(
-          'id,row_number,transaction_date,transaction_type,amount,currency,account_amount,category_name,raw_description,commission_amount,duplicate_decision,candidate_signature,duplicate_signature,categorization_source',
+          'id,row_number,transaction_date,transaction_type,amount,currency,account_amount,category_name,raw_description,commission_amount,duplicate_decision,candidate_signature,duplicate_signature,categorization_source,posting_date,bank_operation_code,mcc',
         )
         .eq('batch_id', id)
         .order('row_number');

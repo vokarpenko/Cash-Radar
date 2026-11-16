@@ -367,6 +367,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             Text(
               '${item.date} · ${item.accountName}${item.accountActive ? '' : ' · архив'} · ${item.categoryName}',
             ),
+            if (item.postingDate != null)
+              Text(
+                'Дата проводки: ${item.postingDate} · код: ${item.bankOperationCode ?? '—'}',
+              ),
+            if (!item.originalAmountKnown)
+              const Text(
+                'Сумма по счёту; сумма и валюта покупки в выписке не указаны.',
+              ),
             if (item.transferGroupId != null)
               const Text('Внутренний перевод · не доход и не расход'),
             if (item.transferFeeGroupId != null)
