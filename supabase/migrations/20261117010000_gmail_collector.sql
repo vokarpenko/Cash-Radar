@@ -4,7 +4,7 @@ create table public.gmail_import_jobs (
  user_id uuid not null references auth.users(id) on delete cascade,
  account_id uuid not null,
  message_id text not null check (length(message_id) between 1 and 256 and message_id ~ '^[A-Za-z0-9_-]+$'),
- attachment_id text not null check (length(attachment_id) between 1 and 256 and attachment_id ~ '^[A-Za-z0-9_-]+$'),
+ attachment_id text not null check (length(attachment_id) between 1 and 2048 and attachment_id ~ '^[A-Za-z0-9_-]+$'),
  status text not null check (status in ('working','complete','failed')),
  error_code text check (error_code is null or error_code ~ '^[a-z_]{1,64}$'),
  batch_id uuid,
@@ -28,7 +28,7 @@ create function public.gmail_claim_attachment(p_user uuid,p_account uuid,p_messa
 returns text language plpgsql security definer set search_path='' as $$
 declare j public.gmail_import_jobs%rowtype;
 begin
- if p_user is null or p_account is null or p_lease is null or coalesce(length(p_message),0) not between 1 and 256 or p_message !~ '^[A-Za-z0-9_-]+$' or coalesce(length(p_attachment),0) not between 1 and 256 or p_attachment !~ '^[A-Za-z0-9_-]+$' then
+ if p_user is null or p_account is null or p_lease is null or coalesce(length(p_message),0) not between 1 and 256 or p_message !~ '^[A-Za-z0-9_-]+$' or coalesce(length(p_attachment),0) not between 1 and 2048 or p_attachment !~ '^[A-Za-z0-9_-]+$' then
   raise exception 'Invalid collector claim' using errcode='22023';
  end if;
  if not exists(select 1 from public.accounts a where a.id=p_account and a.user_id=p_user and a.is_active) then

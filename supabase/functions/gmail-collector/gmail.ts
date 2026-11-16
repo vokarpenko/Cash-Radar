@@ -23,6 +23,12 @@ function identifier(value: unknown): string {
   }
   return value;
 }
+function attachmentIdentifier(value: unknown): string {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]{1,2048}$/.test(value)) {
+    throw new GmailError("invalid_provider_response");
+  }
+  return value;
+}
 function pageTokenValue(value: unknown): string {
   if (typeof value !== "string" || !/^[\x21-\x7e]{1,2048}$/.test(value)) {
     throw new GmailError("invalid_provider_response");
@@ -155,7 +161,7 @@ function attachments(payload: unknown): AttachmentRef[] {
           : (() => {
             throw new GmailError("invalid_provider_response");
           })(),
-      attachmentId: identifier(body.attachmentId),
+      attachmentId: attachmentIdentifier(body.attachmentId),
       filename: part.filename,
       size: body.size as number,
     });
@@ -232,7 +238,7 @@ export class GmailClient {
   }
   async attachment(messageId: string, ref: AttachmentRef): Promise<Uint8Array> {
     identifier(messageId);
-    identifier(ref.attachmentId);
+    attachmentIdentifier(ref.attachmentId);
     if (
       !Number.isSafeInteger(ref.size) || ref.size <= 0 ||
       ref.size > maxAttachmentBytes

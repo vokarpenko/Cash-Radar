@@ -54,7 +54,7 @@ Deno.test("Gmail requests bounded pages, traverses multipart XLSX and adds only 
             parts: [{
               partId: "2",
               filename: "synthetic.xlsx",
-              body: { attachmentId: "attach_1", size: 3 },
+              body: { attachmentId: "a".repeat(404), size: 3 },
             }, { filename: "image.png", body: {} }],
           }],
         },

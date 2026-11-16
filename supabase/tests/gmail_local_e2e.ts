@@ -68,7 +68,7 @@ try {
         id,
         attachments: [{
           partId: "0",
-          attachmentId: "synthetic_attachment_1",
+          attachmentId: "a".repeat(404),
           filename: "synthetic.xlsx",
           size: bytes.length,
         }],
