@@ -12,8 +12,8 @@ begin
   if (select count(*) from public.profiles where id in (
     '10000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002'
   )) <> 2 then raise exception 'User profile bootstrap failed'; end if;
-  if (select count(*) from public.categories where user_id = '10000000-0000-4000-8000-000000000001') <> 16
-    or (select count(*) from public.categories where user_id = '10000000-0000-4000-8000-000000000002') <> 16
+  if (select count(*) from public.categories where user_id = '10000000-0000-4000-8000-000000000001') <> 17
+    or (select count(*) from public.categories where user_id = '10000000-0000-4000-8000-000000000002') <> 17
   then raise exception 'Default category bootstrap failed'; end if;
   if (select count(*) from public.banks) <> 3 then raise exception 'Bank seed failed'; end if;
   if exists (select 1 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
@@ -50,7 +50,7 @@ declare
   changed integer;
 begin
   if (select count(*) from public.profiles) <> 1 then raise exception 'Profile isolation failed'; end if;
-  if (select count(*) from public.categories) <> 16 then raise exception 'Category isolation failed'; end if;
+  if (select count(*) from public.categories) <> 17 then raise exception 'Category isolation failed'; end if;
   if (select count(*) from public.accounts) <> 1 then raise exception 'Account isolation failed'; end if;
   if (select count(*) from public.banks) <> 3 then raise exception 'Authenticated user cannot read banks'; end if;
 
@@ -116,7 +116,7 @@ set local role authenticated;
 do $$
 begin
   if (select count(*) from public.profiles) <> 1 or (select count(*) from public.accounts) <> 1
-    or (select count(*) from public.categories) <> 16
+    or (select count(*) from public.categories) <> 17
   then raise exception 'User B isolation failed'; end if;
 end;
 $$;

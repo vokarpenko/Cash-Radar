@@ -62,8 +62,8 @@ void main() {
         final categoriesB = await clientB
             .from('categories')
             .select('id, user_id');
-        expect(categoriesA, hasLength(16));
-        expect(categoriesB, hasLength(16));
+        expect(categoriesA, hasLength(17));
+        expect(categoriesB, hasLength(17));
         expect(categoriesA.every((row) => row['user_id'] == userA), isTrue);
         expect(categoriesB.every((row) => row['user_id'] == userB), isTrue);
 
@@ -255,7 +255,7 @@ void main() {
               .eq('id', categoriesA.first['id']),
           throwsA(isA<PostgrestException>()),
         );
-        expect(await clientB.from('categories').select('id'), hasLength(16));
+        expect(await clientB.from('categories').select('id'), hasLength(17));
         await expectLater(
           clientA.from('banks').insert({'code': 'unauthorized', 'name': 'Bad'}),
           throwsA(isA<PostgrestException>()),
