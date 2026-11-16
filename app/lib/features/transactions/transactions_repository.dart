@@ -16,6 +16,9 @@ class TransactionEntry {
     required this.accountAmount,
     required this.accountCurrency,
     this.description,
+    this.transferGroupId,
+    this.transferFeeGroupId,
+    this.updatedAt,
   });
   final String id,
       accountId,
@@ -29,7 +32,7 @@ class TransactionEntry {
       accountAmount,
       accountCurrency;
   final bool accountActive;
-  final String? description;
+  final String? description, transferGroupId, transferFeeGroupId, updatedAt;
 
   factory TransactionEntry.fromJson(Map<String, dynamic> row) =>
       TransactionEntry(
@@ -46,6 +49,9 @@ class TransactionEntry {
         accountAmount: row['account_amount'] as String,
         accountCurrency: row['account_currency'] as String,
         description: row['raw_description'] as String?,
+        transferGroupId: row['transfer_group_id'] as String?,
+        transferFeeGroupId: row['transfer_fee_group_id'] as String?,
+        updatedAt: row['updated_at'] as String?,
       );
 }
 

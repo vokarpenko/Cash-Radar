@@ -67,11 +67,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category; do
+          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category internal_transfers; do
             echo "Testing ${test}"
             docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
               -v ON_ERROR_STOP=1 < "supabase/tests/${test}.sql"
           done
+          python3 supabase/tests/transfer_concurrency.py
+          python3 supabase/tests/transfer_api_e2e.py
 
   deploy:
     name: Deploy production Supabase

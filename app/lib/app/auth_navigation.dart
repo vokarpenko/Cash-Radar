@@ -9,6 +9,7 @@ import '../features/auth/auth_service.dart';
 import '../features/imports/import_repository.dart';
 import '../features/settings/currency_repository.dart';
 import '../features/transactions/transactions_repository.dart';
+import '../features/transfers/transfers_repository.dart';
 
 final authServiceProvider = Provider<AuthService>(
   (ref) => throw StateError('AuthService is not configured'),
@@ -82,6 +83,8 @@ final authNavigationProvider = Provider<AuthNavigation>(
         ref.invalidate(transactionCategoriesProvider);
         ref.invalidate(importBatchesProvider);
         ref.invalidate(importDetailProvider);
+        ref.invalidate(transferCandidatesProvider);
+        ref.invalidate(transferGroupsProvider);
       },
     );
     ref.onDispose(controller.dispose);
@@ -96,5 +99,7 @@ final authNavigationProvider = Provider<AuthNavigation>(
     transactionCategoriesProvider,
     importBatchesProvider,
     importDetailProvider,
+    transferCandidatesProvider,
+    transferGroupsProvider,
   ],
 );
