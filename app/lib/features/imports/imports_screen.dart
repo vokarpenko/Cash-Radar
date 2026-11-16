@@ -595,6 +595,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                               'rule' => 'автоматически по вашему правилу · запрос к Gemini не нужен',
                               'alias' => 'алиас',
                               'mcc' => 'MCC',
+                              'bank' => 'по категории Альфа-Банка',
                               'delivery' => 'автоматически: сервис доставки еды',
                               'history' => 'предыдущее исправление',
                               'ai' => 'автоматически по сохранённому AI-правилу · запрос к Gemini не нужен',
