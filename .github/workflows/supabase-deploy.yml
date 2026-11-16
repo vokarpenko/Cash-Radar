@@ -48,6 +48,7 @@ jobs:
             supabase/tests/import_parser_test.ts \
             supabase/tests/ameria_parser_test.ts \
             supabase/tests/acba_parser_test.ts \
+            supabase/tests/alfa_parser_test.ts \
             supabase/tests/ai_categorization_test.ts
 
   database-tests:
@@ -67,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category internal_transfers; do
+          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category internal_transfers alfa_import; do
             echo "Testing ${test}"
             docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
               -v ON_ERROR_STOP=1 < "supabase/tests/${test}.sql"

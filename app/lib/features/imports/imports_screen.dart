@@ -324,7 +324,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Поддерживаются CashRadar CSV, Ameria XLSX и ACBA XLSX: до 1 МиБ и 500 операций. Категории банковских операций — «Прочие доходы» и «Прочие расходы». Снятие блокировки без проводки не создаёт операцию. Проверяйте пересечения с уже внесёнными операциями.',
+                  'Поддерживаются CashRadar CSV, Ameria XLSX, ACBA XLSX и Альфа-Банк XLSX: до 1 МиБ и 500 операций. Категории банковских операций — «Прочие доходы» и «Прочие расходы». Снятие блокировки без проводки не создаёт операцию. Проверяйте пересечения с уже внесёнными операциями.',
                 ),
                 const SizedBox(height: 8),
                 if (_file?.isEncryptedOffice == true)
@@ -515,6 +515,8 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                       ? 'Ameria XLSX'
                       : batch.format == 'acba_xlsx_v1'
                       ? 'ACBA XLSX'
+                      : batch.format == 'alfa_xlsx_v1'
+                      ? 'Альфа-Банк XLSX'
                       : 'CashRadar CSV'} · валюта счёта: ${batch.accountCurrency}',
                 ),
                 Text(
@@ -535,6 +537,10 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                 Text(
                   'Корректных строк: ${batch.rowCount} · ошибок: ${batch.errorCount} · импортировано: ${batch.importedCount} · пропущено: ${batch.duplicateCount}',
                 ),
+                if (batch.format == 'alfa_xlsx_v1')
+                  const Text(
+                    'Показана сумма по счёту. Сумма и валюта покупки в этой выписке отдельно не указаны.',
+                  ),
                 if (batch.status == 'invalid')
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
@@ -557,7 +563,8 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                     'Показаны первые ${batch.errors.length} ошибок из ${batch.errorCount}.',
                   ),
                 if ((batch.status == 'ready' || batch.status == 'completed') &&
-                    batch.format != 'cashradar_csv_v1')
+                    (batch.format == 'ameria_xlsx_v1' ||
+                        batch.format == 'acba_xlsx_v1'))
                   AiImportPanel(
                     key: ValueKey(batch.id),
                     batchId: batch.id,
@@ -578,6 +585,10 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                         Text(
                           'Строка ${row.rowNumber} · ${row.date} · ${row.category}',
                         ),
+                        if (row.postingDate != null)
+                          Text(
+                            'Дата проводки: ${row.postingDate} · код: ${row.bankOperationCode ?? '—'}${row.mcc == null ? '' : ' · MCC: ${row.mcc}'}',
+                          ),
                         if (row.categorizationSource != null)
                           Text(
                             'Категория: ${switch (row.categorizationSource) {

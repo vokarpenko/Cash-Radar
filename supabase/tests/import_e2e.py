@@ -88,8 +88,8 @@ try:
     require(code == 201, 'Could not create Ameria test account')
     ameria_id = ameria[0]['id']
     xlsx = (root / 'supabase/tests/fixtures/ameria_synthetic.xlsx').read_bytes()
-    code, _ = invoke(a, a['account'], xlsx, 'ameria.xlsx')
-    require(code == 400, 'Ameria import accepted non-Ameria account')
+    code, wrong_account = invoke(a, a['account'], xlsx, 'ameria.xlsx')
+    require(code == 400, f'Ameria wrong-account validation failed ({code}): {wrong_account}')
     code, prepared = invoke(a, ameria_id, xlsx, 'ameria.xlsx')
     require(code == 200 and prepared.get('status') == 'ready' and not prepared.get('duplicate'), f'Ameria preview failed ({code}): {prepared.get("error", "")}')
     ameria_batch = prepared['id']
@@ -141,6 +141,23 @@ try:
     require(code == 200 and Decimal(balance[0]['current_balance']) == Decimal('1047.50'), 'ACBA closing balance is wrong')
     code, again = invoke(a, acba_id, encrypted, 'same.xlsx', 'synthetic-only')
     require(code == 200 and again.get('duplicate') and again.get('id') == acba_batch, 'ACBA duplicate not detected')
+    code, banks = get(a, '/rest/v1/banks?select=id&code=eq.alfa_ru')
+    require(code == 200 and len(banks) == 1, 'Alfa bank missing')
+    code, alfa = request('/rest/v1/accounts?select=id', 'POST', token=a['token'], data={'name':'Synthetic Alfa','account_type':'bank','bank_id':banks[0]['id'],'currency':'RUB','initial_balance':'100.00'})
+    require(code == 201, 'Could not create Alfa test account')
+    alfa_id = alfa[0]['id']
+    xlsx = (root / 'supabase/tests/fixtures/alfa_synthetic.xlsx').read_bytes()
+    code, result = invoke(a, alfa_id, xlsx, 'alfa.xlsx')
+    require(code == 200 and result.get('status') == 'ready', f'Alfa preview failed ({code}): {result.get("error", "")}')
+    alfa_batch = result['id']
+    code, rows = get(a, f'/rest/v1/import_item_details?select=posting_date,bank_operation_code,mcc,original_amount_known&batch_id=eq.{alfa_batch}')
+    require(code == 200 and len(rows) == 4 and all(row['posting_date'] and row['bank_operation_code'] and not row['original_amount_known'] for row in rows), 'Alfa preview metadata missing')
+    code, done = request('/rest/v1/rpc/confirm_statement_import', 'POST', token=a['token'], data={'p_batch_id':alfa_batch})
+    require(code == 200 and done.get('imported_count') == 4, 'Alfa confirmation failed')
+    code, rows = get(a, f'/rest/v1/transaction_details?select=posting_date,bank_operation_code,original_amount_known&account_id=eq.{alfa_id}')
+    require(code == 200 and len(rows) == 4 and all(row['posting_date'] and row['bank_operation_code'] and not row['original_amount_known'] for row in rows), 'Alfa transaction metadata missing')
+    code, again = invoke(a, alfa_id, xlsx, 'again.xlsx')
+    require(code == 200 and again.get('duplicate') and again.get('id') == alfa_batch, 'Alfa duplicate was not detected')
     header = 'date,type,amount,currency,account_amount,category,description\n'
     content = (header + '2026-11-11,expense,10.25,AMD,,Продукты,Local test\n2026-11-12,income,2.00,AMD,,Зарплата,Local test\n').encode()
     code, result = invoke(a, a['account'], content)

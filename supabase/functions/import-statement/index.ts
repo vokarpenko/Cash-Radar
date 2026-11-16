@@ -1,3 +1,4 @@
+import { parseAlfaXlsx } from "./alfa.ts";
 import { parseAcbaXlsx } from "./acba.ts";
 import { decryptAcba } from "./encrypted.ts";
 import { parseAmeriaXlsx } from "./ameria.ts";
@@ -151,7 +152,7 @@ Deno.serve(async (req: Request) => {
     if (format !== "csv" && format !== "xlsx" && format !== "encrypted_xlsx") {
       throw new HttpError(
         422,
-        "Формат не распознан. Поддерживаются CashRadar CSV и выписки Ameria и ACBA XLSX.",
+        "Формат не распознан. Поддерживаются CashRadar CSV и выписки Ameria, ACBA и Альфа-Банка XLSX.",
       );
     }
     const headers = { apikey: service, Authorization: `Bearer ${service}` };
@@ -186,10 +187,10 @@ Deno.serve(async (req: Request) => {
       }
       const banks = await bankResponse.json();
       bankCode = banks[0]?.code ?? null;
-      if (!["ameria_am", "acba_am"].includes(bankCode ?? "")) {
+      if (!["ameria_am", "acba_am", "alfa_ru"].includes(bankCode ?? "")) {
         throw new HttpError(
           400,
-          "Для банковской выписки выберите счёт Ameria или ACBA.",
+          "Для банковской выписки выберите счёт Ameria, ACBA или Альфа-Банка.",
         );
       }
       if (format === "encrypted_xlsx" && bankCode !== "acba_am") {
@@ -237,12 +238,16 @@ Deno.serve(async (req: Request) => {
       const content = format === "encrypted_xlsx"
         ? await decryptAcba(bytes, body.password)
         : bytes;
-      parsed = bankCode === "acba_am"
+      parsed = bankCode === "alfa_ru"
+        ? await parseAlfaXlsx(content, account.currency, categories)
+        : bankCode === "acba_am"
         ? await parseAcbaXlsx(content, account.currency, categories)
         : await parseAmeriaXlsx(content, account.currency, categories);
     }
     const importFormat = format === "csv"
       ? "cashradar_csv_v1"
+      : bankCode === "alfa_ru"
+      ? "alfa_xlsx_v1"
       : bankCode === "acba_am"
       ? "acba_xlsx_v1"
       : "ameria_xlsx_v1";
