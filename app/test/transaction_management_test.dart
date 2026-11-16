@@ -201,7 +201,7 @@ void main() {
     await open(tester);
     tester.view.physicalSize = const Size(390, 800);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Добавить операцию'));
+    await tester.tap(find.byTooltip('Добавить операцию'));
     await tester.pumpAndSettle();
     await tester.tap(dropdown(1));
     await tester.pumpAndSettle();

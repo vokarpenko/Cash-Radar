@@ -162,3 +162,14 @@ python3 supabase/tests/ai_e2e.py
 ```
 
 Последняя проверка работает только с локальным Supabase и тестовым аккаунтом, но делает настоящий запрос к Gemini с вымышленным названием. Реальные выписки при этом не используются. Доступность модели и квота зависят от проекта Google AI Studio.
+
+## Проверка внутренних переводов
+
+Логика и ограничения этапа 14 описаны в [transfers.md](transfers.md). Следующие команды используют только локальный Supabase; SQL-тест откатывает свои фикстуры, а API и конкурентная проверка создают и удаляют собственных синтетических пользователей:
+
+```sh
+docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/internal_transfers.sql
+python3 supabase/tests/transfer_concurrency.py
+python3 supabase/tests/transfer_api_e2e.py
+```

@@ -6,6 +6,7 @@ import '../../shared/section_state.dart';
 import '../accounts/accounts_repository.dart';
 import '../accounts/money.dart';
 import 'transaction_form.dart';
+import '../transfers/transfers_dialog.dart';
 import 'transactions_repository.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
@@ -164,16 +165,40 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Доходы и расходы',
+                  'Все операции',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ],
             ),
-            FilledButton.icon(
-              onPressed: () => _edit(),
-              icon: const Icon(Icons.add),
-              label: const Text('Добавить операцию'),
-            ),
+            if (MediaQuery.sizeOf(context).width < 500)
+              IconButton(
+                tooltip: 'Переводы',
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const TransfersDialog(),
+                ),
+                icon: const Icon(Icons.swap_horiz),
+              )
+            else
+              TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const TransfersDialog(),
+                ),
+                child: const Text('Переводы'),
+              ),
+            if (MediaQuery.sizeOf(context).width < 500)
+              IconButton.filled(
+                tooltip: 'Добавить операцию',
+                onPressed: () => _edit(),
+                icon: const Icon(Icons.add),
+              )
+            else
+              FilledButton.icon(
+                onPressed: () => _edit(),
+                icon: const Icon(Icons.add),
+                label: const Text('Добавить операцию'),
+              ),
           ],
         ),
         const SizedBox(height: 12),
@@ -215,7 +240,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               final filtered = items
                   .where(
                     (t) =>
-                        (_type.isEmpty || t.type == _type) &&
+                        (_type.isEmpty ||
+                            (_type == 'transfer'
+                                ? t.transferGroupId != null
+                                : t.transferGroupId == null &&
+                                      t.type == _type)) &&
                         (selectedAccount.isEmpty ||
                             t.accountId == selectedAccount) &&
                         (selectedCategory.isEmpty ||
@@ -248,6 +277,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       _filter('Тип', _type, {
                         'income': 'Доход',
                         'expense': 'Расход',
+                        'transfer': 'Перевод',
                       }, (v) => _type = v),
                       _filter('Счёт', _account, accounts, (v) => _account = v),
                       _filter(
@@ -326,13 +356,21 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             Text(
               item.description?.isNotEmpty == true
                   ? item.description!
-                  : (item.type == 'income' ? 'Доход' : 'Расход'),
+                  : (item.transferGroupId != null
+                        ? 'Внутренний перевод'
+                        : item.type == 'income'
+                        ? 'Доход'
+                        : 'Расход'),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
             Text(
               '${item.date} · ${item.accountName}${item.accountActive ? '' : ' · архив'} · ${item.categoryName}',
             ),
+            if (item.transferGroupId != null)
+              const Text('Внутренний перевод · не доход и не расход'),
+            if (item.transferFeeGroupId != null)
+              const Text('Комиссия перевода · расход'),
             const SizedBox(height: 8),
             Text(
               '$sign$amount ${item.currency}',
@@ -344,12 +382,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               spacing: 8,
               children: [
                 TextButton.icon(
-                  onPressed: _busy.contains(item.id) ? null : () => _edit(item),
+                  onPressed:
+                      _busy.contains(item.id) ||
+                          item.transferGroupId != null ||
+                          item.transferFeeGroupId != null
+                      ? null
+                      : () => _edit(item),
                   icon: const Icon(Icons.edit_outlined),
                   label: const Text('Изменить'),
                 ),
                 TextButton.icon(
-                  onPressed: _busy.contains(item.id)
+                  onPressed:
+                      _busy.contains(item.id) ||
+                          item.transferGroupId != null ||
+                          item.transferFeeGroupId != null
                       ? null
                       : () => _delete(item),
                   icon: const Icon(Icons.delete_outline),
