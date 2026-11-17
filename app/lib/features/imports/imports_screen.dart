@@ -36,6 +36,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
     _userId = _navigation.userId;
     _sessionVersion++;
     _password.clear();
+    ref.invalidate(gmailActivityProvider);
     setState(() {
       _file = null;
       _accountId = null;
@@ -303,6 +304,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountsProvider);
     final batches = ref.watch(importBatchesProvider);
+    final gmail = ref.watch(gmailActivityProvider(_userId ?? ''));
     final active =
         accounts.asData?.value.where((a) => a.isActive).toList() ?? [];
     final chosen = active.where((a) => a.id == _accountId).firstOrNull;
@@ -311,6 +313,74 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
         Text('Импорт', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 6),
         const Text('Подготовьте файл, проверьте строки и подтвердите импорт.'),
+        const SizedBox(height: 20),
+        Card(
+          child: ExpansionTile(
+            title: const Text('Выписки из Gmail'),
+            childrenPadding: const EdgeInsets.all(16),
+            children: [
+              gmail.when(
+                loading: () => const Text('Загрузка состояния…'),
+                error: (_, _) =>
+                    const Text('Не удалось загрузить состояние Gmail.'),
+                data: (activity) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activity.lastRun == null
+                          ? 'Проверок пока нет.'
+                          : 'Последняя проверка: ${_createdAt(activity.lastRun!)}',
+                    ),
+                    if (activity.lastRun != null)
+                      Text(
+                        'Писем проверено: ${activity.scanned} · подготовлено файлов: ${activity.prepared} · ошибок: ${activity.failed}',
+                      ),
+                    if (activity.errorCode != null)
+                      Text(switch (activity.errorCode) {
+                        'authorization_expired' =>
+                          'Доступ к Gmail истёк. Подключите аккаунт заново.',
+                        'mailbox_mismatch' =>
+                          'Подключённая почта не совпадает с настроенным адресом.',
+                        'unsupported_attachment' =>
+                          'В письме нет поддерживаемой XLSX-выписки или есть вложение другого формата.',
+                        'unsupported_encrypted' =>
+                          'Защищённую выписку можно импортировать вручную.',
+                        'acba_password_missing' =>
+                          'Не настроен пароль выписки ACBA.',
+                        'acba_password_invalid' =>
+                          'Пароль выписки ACBA неверный. Обновите секрет.',
+                        'invalid_attachment_size' =>
+                          'Размер вложения недопустим: максимум 1 МиБ.',
+                        'wrong_account' =>
+                          'Выписка уже подготовлена для другого счёта.',
+                        'rate_limited' =>
+                          'Gmail временно ограничил запросы. Проверка повторится позже.',
+                        'account_unavailable' =>
+                          'Проверьте настройки счёта для выписок.',
+                        _ =>
+                          'Не удалось проверить Gmail. Проверьте настройки подключения.',
+                      }),
+                    if (activity.failedAttachments > 0)
+                      Text(
+                        'Вложений ожидают повторной обработки: ${activity.failedAttachments}.',
+                      ),
+                    const Text(
+                      'Подготовленные выписки отображаются ниже. Операции импортируются после подтверждения.',
+                    ),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  ref.invalidate(gmailActivityProvider);
+                  ref.invalidate(importBatchesProvider);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Обновить'),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 20),
         Card(
           child: Padding(

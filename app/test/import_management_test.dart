@@ -47,6 +47,9 @@ class TestPicker implements StatementFilePicker {
 }
 
 class MemoryImports implements ImportsRepository {
+  @override
+  Future<GmailActivity> loadGmailActivity(String userId) async => gmailActivity;
+  GmailActivity gmailActivity = const GmailActivity();
   String status = 'ready', format = 'cashradar_csv_v1';
   bool prepared = false, duplicate = false, hasCandidate = false;
   String? reviewDecision;
@@ -207,6 +210,47 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets(
+    'shows Gmail authorization failure without exposing message data',
+    (tester) async {
+      imports.gmailActivity = const GmailActivity(
+        lastRun: '2026-11-17T00:00:00Z',
+        errorCode: 'authorization_expired',
+        scanned: 1,
+        failedAttachments: 1,
+      );
+      await open(tester);
+      await tester.tap(find.text('Выписки из Gmail'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Доступ к Gmail истёк. Подключите аккаунт заново.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Вложений ожидают повторной обработки: 1.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('shows an incorrect ACBA password without revealing it', (
+    tester,
+  ) async {
+    imports.gmailActivity = const GmailActivity(
+      lastRun: '2026-11-17T00:00:00Z',
+      errorCode: 'acba_password_invalid',
+      failed: 1,
+      failedAttachments: 1,
+    );
+    await open(tester);
+    await tester.tap(find.text('Выписки из Gmail'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Пароль выписки ACBA неверный. Обновите секрет.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('prepares a private preview and confirms once', (tester) async {
     await open(tester);
     await prepare(tester);
@@ -216,7 +260,11 @@ void main() {
     expect(find.text('Счёт: Мой счёт · Ameria Bank'), findsOneWidget);
     expect(find.text('−12.34 EUR'), findsOneWidget);
     expect(find.text('Строка 2, по счёту: 5000.00 AMD'), findsOneWidget);
-    await tester.ensureVisible(find.text('Подтвердить импорт'));
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Подтвердить импорт')),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Подтвердить импорт'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Подтвердить'));
@@ -258,7 +306,11 @@ void main() {
           .onPressed,
       isNull,
     );
-    await tester.ensureVisible(find.text('Пропустить строку'));
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Пропустить строку')),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Пропустить строку'));
     await tester.pumpAndSettle();
     expect(find.text('Решение: пропустить'), findsOneWidget);
