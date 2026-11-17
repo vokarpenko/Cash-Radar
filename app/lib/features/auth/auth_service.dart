@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../notifications/notification_bridge.dart';
 
 /// Isolates UI code from the authentication provider.
 abstract interface class AuthService {
@@ -51,7 +52,10 @@ class SupabaseAuthService implements AuthService {
   }
 
   @override
-  Future<void> signOut() => _client.auth.signOut();
+  Future<void> signOut() async {
+    await NotificationBridge.disable(_client);
+    await _client.auth.signOut();
+  }
 
   @override
   Future<void> resetPassword(String email) =>

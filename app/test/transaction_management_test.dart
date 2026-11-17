@@ -24,6 +24,17 @@ class TransactionTestAccounts implements AccountsRepository {
 }
 
 class MemoryTransactions implements TransactionsRepository {
+  @override
+  Future<List<PendingNotification>> loadPendingNotifications(
+    String userId,
+  ) async => List.of(pending);
+  @override
+  Future<void> dismissNotification(String id) async {
+    pending.removeWhere((item) => item.id == id);
+  }
+
+  final List<PendingNotification> pending = [];
+
   final List<TransactionEntry> entries = [];
   TransactionInput? lastInput;
   @override
@@ -101,6 +112,35 @@ void main() {
         matching: find.byType(DropdownButtonFormField<String>),
       )
       .at(index);
+  testWidgets(
+    'shows a pending notification without creating a confirmed operation',
+    (tester) async {
+      repository.pending.add(
+        const PendingNotification(
+          id: 'p1',
+          source: 'acba',
+          kind: 'pre_purchase_completion',
+          amount: '123.45',
+          currency: 'AMD',
+          merchant: 'Synthetic Store',
+          cardLast4: '1111',
+          occurredAt: '2026-11-17T12:00:00Z',
+          timeSource: 'bank',
+        ),
+      );
+      await open(tester);
+      expect(find.text('Предварительные уведомления (1)'), findsOneWidget);
+      await tester.tap(find.text('Предварительные уведомления (1)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Завершение холда · Synthetic Store'), findsOneWidget);
+      expect(repository.entries, isEmpty);
+      await tester.tap(find.byTooltip('Скрыть уведомление'));
+      await tester.pumpAndSettle();
+      expect(find.text('Предварительные уведомления (1)'), findsNothing);
+      expect(repository.entries, isEmpty);
+    },
+  );
+
   testWidgets(
     'creates, edits and deletes a foreign currency expense with confirmation',
     (tester) async {

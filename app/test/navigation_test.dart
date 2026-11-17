@@ -45,6 +45,13 @@ class FakeCurrency implements CurrencyRepository {
 
 class EmptyTransactions implements TransactionsRepository {
   @override
+  Future<List<PendingNotification>> loadPendingNotifications(
+    String userId,
+  ) async => [];
+  @override
+  Future<void> dismissNotification(String id) async {}
+
+  @override
   Future<List<TransactionEntry>> loadTransactions() async => [];
   @override
   Future<List<TransactionCategory>> loadCategories() async => [];

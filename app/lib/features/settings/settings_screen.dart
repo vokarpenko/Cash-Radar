@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../config/app_config.dart';
+import '../notifications/notification_bridge.dart';
 import '../../app/auth_navigation.dart';
 import '../accounts/money.dart';
 import '../categorization/rules_screen.dart';
@@ -11,9 +14,118 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
+    with WidgetsBindingObserver {
   bool _signingOut = false;
   bool _saving = false;
+  bool _notificationBusy = false;
+  NotificationCollectorStatus? _notificationStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadNotificationStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadNotificationStatus();
+  }
+
+  Future<void> _loadNotificationStatus() async {
+    if (!NotificationBridge.supported) return;
+    try {
+      final status = await NotificationBridge.status();
+      if (mounted) setState(() => _notificationStatus = status);
+    } catch (_) {
+      if (mounted) setState(() => _notificationStatus = null);
+    }
+  }
+
+  Future<void> _changeNotificationSetting() async {
+    setState(() => _notificationBusy = true);
+    try {
+      final status = await NotificationBridge.status();
+      if (!status.permission) {
+        await NotificationBridge.openSettings();
+      } else if (status.enabled) {
+        await NotificationBridge.disable(Supabase.instance.client);
+      } else {
+        final owner = ref.read(authNavigationProvider).userId;
+        if (owner == null) throw StateError('Session unavailable');
+        await NotificationBridge.enable(
+          Supabase.instance.client,
+          owner,
+          AppConfig.fromEnvironment(),
+        );
+      }
+      await _loadNotificationStatus();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Не удалось изменить настройку уведомлений. Попробуйте ещё раз.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _notificationBusy = false);
+    }
+  }
+
+  Future<void> _revokeAllNotificationDevices() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Отключить все устройства?'),
+        content: const Text(
+          'Сбор уведомлений прекратится на всех Android-устройствах. Его можно включить заново на каждом из них.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Отключить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await Supabase.instance.client.rpc('revoke_all_notification_devices');
+      await NotificationBridge.syncOwner(null);
+      await _loadNotificationStatus();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Сбор уведомлений на устройствах отключён.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Не удалось отключить устройства. Попробуйте ещё раз.',
+            ),
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _signOut() async {
     setState(() => _signingOut = true);
@@ -107,6 +219,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   context: context,
                   builder: (_) => const RulesDialog(),
                 ),
+              ),
+              const Divider(height: 1),
+              if (NotificationBridge.supported) ...[
+                ListTile(
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: const Text('Уведомления об операциях'),
+                  subtitle: Text(
+                    _notificationStatus == null
+                        ? 'Проверяем доступ…'
+                        : !_notificationStatus!.permission
+                        ? 'Нужен доступ к уведомлениям в настройках Android.'
+                        : _notificationStatus!.enabled
+                        ? 'Включено. В очереди: ${_notificationStatus!.queued}.${_notificationStatus!.dropped > 0 ? ' Пропущено из-за переполнения: ${_notificationStatus!.dropped}.' : ''}'
+                        : 'Доступ выдан. Включите сбор в CashRadar.',
+                  ),
+                  trailing: TextButton(
+                    onPressed: _notificationBusy || _notificationStatus == null
+                        ? null
+                        : _changeNotificationSetting,
+                    child: Text(
+                      _notificationStatus?.permission != true
+                          ? 'Настроить'
+                          : _notificationStatus?.enabled == true
+                          ? 'Выключить'
+                          : 'Включить',
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Text(
+                    'Android предоставляет доступ ко всем уведомлениям. CashRadar обрабатывает только Google Wallet, My Ameria и acba digital; сообщения и коды подтверждения не обрабатываются. Операции предварительные и не меняют остатки.',
+                  ),
+                ),
+                const Divider(height: 1),
+              ],
+              ListTile(
+                leading: const Icon(Icons.phonelink_erase),
+                title: const Text('Отключить сбор на всех устройствах'),
+                subtitle: const Text(
+                  'Отозвать доступ Android-устройств к отправке уведомлений',
+                ),
+                onTap: _revokeAllNotificationDevices,
               ),
               const Divider(height: 1),
               ListTile(

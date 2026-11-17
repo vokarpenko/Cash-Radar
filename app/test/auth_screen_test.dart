@@ -43,6 +43,11 @@ void main() {
     expect(find.text('Добро пожаловать в CashRadar'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Выйти')),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Выйти'));
     await tester.pumpAndSettle();
     expect(find.text('Добро пожаловать в CashRadar'), findsNothing);
