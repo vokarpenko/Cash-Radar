@@ -79,6 +79,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       color: surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -140,7 +141,14 @@ ThemeData buildAppTheme(Brightness brightness) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     ),
     listTileTheme: ListTileThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    ),
+    expansionTileTheme: ExpansionTileThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      collapsedShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      clipBehavior: Clip.antiAlias,
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
