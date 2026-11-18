@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/auth_navigation.dart';
@@ -58,7 +59,7 @@ class _RulesDialogState extends ConsumerState<RulesDialog> {
   }
 
   Future<void> _add(bool alias, List<TransactionCategory> categories) async {
-    final input = await showDialog<_RuleInput>(
+    final input = await showAdaptiveAction<_RuleInput>(
       context: context,
       builder: (_) => _RuleEditor(alias: alias, categories: categories),
     );
@@ -113,6 +114,10 @@ class _RulesDialogState extends ConsumerState<RulesDialog> {
                       .firstOrNull ??
                   'Без категории';
               return ListView(
+                controller: ActionSheetScroll.maybeOf(context),
+                physics: ActionSheetScroll.maybeOf(context) == null
+                    ? null
+                    : const AlwaysScrollableScrollPhysics(),
                 shrinkWrap: true,
                 children: [
                   const Text(
@@ -271,12 +276,20 @@ class _RuleEditorState extends State<_RuleEditor> {
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           child: Form(
             key: _form,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _kind,
                   decoration: const InputDecoration(labelText: 'Тип операции'),
                   items: const [
@@ -290,6 +303,10 @@ class _RuleEditorState extends State<_RuleEditor> {
                 ),
                 if (!widget.alias)
                   DropdownButtonFormField<String>(
+                    borderRadius: BorderRadius.circular(16),
+                    dropdownColor: Theme.of(context).colorScheme.surface,
+                    menuMaxHeight: 320,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
                     initialValue: _type,
                     decoration: const InputDecoration(labelText: 'Условие'),
                     items: const [
@@ -337,6 +354,10 @@ class _RuleEditorState extends State<_RuleEditor> {
                         : 'Минимум 3 символа',
                   ),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   key: ValueKey('rule-cat-$_kind'),
                   initialValue: _category,
                   decoration: InputDecoration(

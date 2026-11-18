@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,7 +54,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   Future<void> _edit([TransactionEntry? item]) async {
-    await showDialog<bool>(
+    await showAdaptiveAction<bool>(
       context: context,
       builder: (_) => TransactionForm(transaction: item),
     );
@@ -109,7 +110,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   void _openNotifications() {
     final owner = _userId;
     if (owner == null) return;
-    showDialog<void>(
+    showAdaptiveAction<void>(
       context: context,
       builder: (_) => PendingNotificationsDialog(owner: owner),
     );
@@ -132,25 +133,113 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     String label,
     String value,
     Map<String, String> choices,
-    ValueChanged<String> onChanged,
-  ) {
+    ValueChanged<String> onChanged, {
+    double width = 200,
+    VoidCallback? refreshSheet,
+  }) {
     final selected = choices.containsKey(value) ? value : '';
+    final scheme = Theme.of(context).colorScheme;
+    final options = <String, String>{'': 'Все', ...choices};
+    final active = selected.isNotEmpty;
+    final border = BorderRadius.circular(14);
     return SizedBox(
-      width: 200,
-      child: DropdownButtonFormField<String>(
-        key: ValueKey('$label-$selected-${choices.keys.join(",")}'),
-        initialValue: selected,
-        isExpanded: true,
-        decoration: InputDecoration(labelText: label),
-        items: [
-          const DropdownMenuItem(value: '', child: Text('Все')),
-          for (final entry in choices.entries)
-            DropdownMenuItem(
-              value: entry.key,
-              child: Text(entry.value, overflow: TextOverflow.ellipsis),
+      width: width,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ),
+          Material(
+            color: active ? scheme.primaryContainer : scheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: border,
+              side: BorderSide(
+                color: active ? scheme.primaryContainer : scheme.outlineVariant,
+              ),
             ),
+            clipBehavior: Clip.antiAlias,
+            child: PopupMenuButton<String>(
+              key: ValueKey('transaction-filter-$label'),
+              tooltip: '',
+              position: PopupMenuPosition.under,
+              offset: const Offset(0, 6),
+              elevation: 3,
+              color: scheme.surface,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 200,
+                maxWidth: 300,
+                maxHeight: 320,
+              ),
+              borderRadius: border,
+              onSelected: (v) {
+                setState(() => onChanged(v));
+                refreshSheet?.call();
+              },
+              itemBuilder: (context) => [
+                for (final entry in options.entries)
+                  PopupMenuItem<String>(
+                    value: entry.key,
+                    height: 48,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (entry.key == selected)
+                          Icon(
+                            Icons.check_rounded,
+                            size: 20,
+                            color: scheme.primary,
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+              child: Semantics(
+                label: '$label: ${options[selected]}',
+                child: SizedBox(
+                  height: 48,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            options[selected]!,
+                            style: TextStyle(
+                              color: active
+                                  ? scheme.onPrimaryContainer
+                                  : scheme.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: active
+                              ? scheme.onPrimaryContainer
+                              : scheme.onSurface,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
-        onChanged: (v) => setState(() => onChanged(v ?? '')),
       ),
     );
   }
@@ -163,7 +252,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          alignment: WrapAlignment.spaceBetween,
+          spacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           runSpacing: 12,
           children: [
@@ -203,7 +292,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             if (MediaQuery.sizeOf(context).width < 500)
               IconButton(
                 tooltip: 'Переводы',
-                onPressed: () => showDialog<void>(
+                onPressed: () => showAdaptiveAction<void>(
                   context: context,
                   builder: (_) => const TransfersDialog(),
                 ),
@@ -211,7 +300,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               )
             else
               TextButton(
-                onPressed: () => showDialog<void>(
+                onPressed: () => showAdaptiveAction<void>(
                   context: context,
                   builder: (_) => const TransfersDialog(),
                 ),
@@ -219,6 +308,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ),
             if (MediaQuery.sizeOf(context).width < 500)
               IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  foregroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onPrimaryContainer,
+                ),
                 tooltip: 'Добавить операцию',
                 onPressed: () => _edit(),
                 icon: const Icon(Icons.add),
@@ -231,7 +328,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 24),
         Expanded(
           child: transactions.when(
             skipLoadingOnRefresh: false,
@@ -267,6 +364,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   ? _currency
                   : '';
               final query = _search.text.trim().toLowerCase();
+              final hasFilters =
+                  _type.isNotEmpty ||
+                  _account.isNotEmpty ||
+                  _category.isNotEmpty ||
+                  _currency.isNotEmpty ||
+                  _dates != null ||
+                  query.isNotEmpty;
               final filtered = items
                   .where(
                     (t) =>
@@ -290,66 +394,132 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                 .contains(query)),
                   )
                   .toList();
+              final mobile = MediaQuery.sizeOf(context).width < 560;
+              final activeCount = [
+                _type.isNotEmpty,
+                _account.isNotEmpty,
+                _category.isNotEmpty,
+                _currency.isNotEmpty,
+                _dates != null,
+              ].where((active) => active).length;
               return ListView(
                 children: [
-                  TextField(
-                    controller: _search,
-                    onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(
-                      labelText: 'Поиск',
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                  ),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
+                  Row(
                     children: [
-                      _filter('Тип', _type, {
-                        'income': 'Доход',
-                        'expense': 'Расход',
-                        'transfer': 'Перевод',
-                      }, (v) => _type = v),
-                      _filter('Счёт', _account, accounts, (v) => _account = v),
-                      _filter(
-                        'Категория',
-                        _category,
-                        categories,
-                        (v) => _category = v,
-                      ),
-                      _filter(
-                        'Валюта',
-                        _currency,
-                        currencies,
-                        (v) => _currency = v,
-                      ),
-                      TextButton.icon(
-                        onPressed: _selectDates,
-                        icon: const Icon(Icons.date_range),
-                        label: Text(
-                          _dates == null
-                              ? 'Период'
-                              : '${_day(_dates!.start)} — ${_day(_dates!.end)}',
+                      Expanded(
+                        child: TextField(
+                          controller: _search,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: mobile
+                                ? 'Поиск операций'
+                                : 'Поиск по операциям, счетам и категориям',
+                            prefixIcon: const Icon(Icons.search),
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surface,
+                          ),
                         ),
                       ),
-                      if (_dates != null)
-                        TextButton(
-                          onPressed: () => setState(() => _dates = null),
-                          child: const Text('Сбросить период'),
+                      if (mobile) ...[
+                        const SizedBox(width: 10),
+                        Badge(
+                          isLabelVisible: activeCount > 0,
+                          label: Text('$activeCount'),
+                          child: IconButton.outlined(
+                            tooltip: 'Показать фильтры',
+                            onPressed: () =>
+                                _openFilters(accounts, categories, currencies),
+                            icon: const Icon(Icons.tune_rounded),
+                          ),
                         ),
-                      TextButton(
-                        onPressed: () => setState(() {
-                          _type = '';
-                          _account = '';
-                          _category = '';
-                          _currency = '';
-                          _dates = null;
-                          _search.clear();
-                        }),
-                        child: const Text('Сбросить фильтры'),
-                      ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  if (!mobile) ...[
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 16,
+                      children: [
+                        _filter('Тип', _type, {
+                          'income': 'Доход',
+                          'expense': 'Расход',
+                          'transfer': 'Перевод',
+                        }, (v) => _type = v),
+                        _filter(
+                          'Счёт',
+                          _account,
+                          accounts,
+                          (v) => _account = v,
+                        ),
+                        _filter(
+                          'Категория',
+                          _category,
+                          categories,
+                          (v) => _category = v,
+                        ),
+                        _filter(
+                          'Валюта',
+                          _currency,
+                          currencies,
+                          (v) => _currency = v,
+                        ),
+                        TextButton.icon(
+                          style: _dates == null
+                              ? null
+                              : TextButton.styleFrom(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                ),
+                          onPressed: _selectDates,
+                          icon: const Icon(Icons.date_range),
+                          label: Text(
+                            _dates == null
+                                ? 'Период'
+                                : '${_day(_dates!.start)} — ${_day(_dates!.end)}',
+                          ),
+                        ),
+                        if (_dates != null)
+                          TextButton(
+                            onPressed: () => setState(() => _dates = null),
+                            child: const Text('Сбросить период'),
+                          ),
+                        TextButton(
+                          style: !hasFilters
+                              ? null
+                              : TextButton.styleFrom(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                ),
+                          onPressed: () => setState(() {
+                            _type = '';
+                            _account = '';
+                            _category = '';
+                            _currency = '';
+                            _dates = null;
+                            _search.clear();
+                          }),
+                          child: const Text('Сбросить фильтры'),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  if (filtered.isNotEmpty) ...[
+                    Text(
+                      'История операций',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   if (filtered.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -373,75 +543,439 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  Widget _card(TransactionEntry item) {
-    final amount = Money.displayStored(item.amount);
-    final accountAmount = Money.displayStored(item.accountAmount);
-    final sign = item.type == 'income' ? '+' : '−';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.description?.isNotEmpty == true
-                  ? item.description!
-                  : (item.transferGroupId != null
-                        ? 'Внутренний перевод'
-                        : item.type == 'income'
-                        ? 'Доход'
-                        : 'Расход'),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${item.date} · ${item.accountName}${item.accountActive ? '' : ' · архив'} · ${item.categoryName}',
-            ),
-            if (item.postingDate != null)
-              Text(
-                'Дата проводки: ${item.postingDate} · код: ${item.bankOperationCode ?? '—'}',
+  void _openFilters(
+    Map<String, String> accounts,
+    Map<String, String> categories,
+    Map<String, String> currencies,
+  ) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          void refresh() {
+            if (sheetContext.mounted) setSheetState(() {});
+          }
+
+          final scheme = Theme.of(sheetContext).colorScheme;
+          final hasFilters =
+              _type.isNotEmpty ||
+              _account.isNotEmpty ||
+              _category.isNotEmpty ||
+              _currency.isNotEmpty ||
+              _dates != null ||
+              _search.text.trim().isNotEmpty;
+          return SafeArea(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * .85,
               ),
-            if (!item.originalAmountKnown)
-              const Text(
-                'Сумма по счёту; сумма и валюта покупки в выписке не указаны.',
-              ),
-            if (item.transferGroupId != null)
-              const Text('Внутренний перевод · не доход и не расход'),
-            if (item.transferFeeGroupId != null)
-              const Text('Комиссия перевода · расход'),
-            const SizedBox(height: 8),
-            Text(
-              '$sign$amount ${item.currency}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            if (item.currency != item.accountCurrency)
-              Text('По счёту: $sign$accountAmount ${item.accountCurrency}'),
-            Wrap(
-              spacing: 8,
-              children: [
-                TextButton.icon(
-                  onPressed:
-                      _busy.contains(item.id) ||
-                          item.transferGroupId != null ||
-                          item.transferFeeGroupId != null
-                      ? null
-                      : () => _edit(item),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Изменить'),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = (constraints.maxWidth - 12) / 2;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Фильтры',
+                                style: Theme.of(
+                                  sheetContext,
+                                ).textTheme.titleLarge,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Закрыть',
+                              onPressed: () => Navigator.pop(sheetContext),
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 16,
+                          children: [
+                            _filter(
+                              'Тип',
+                              _type,
+                              {
+                                'income': 'Доход',
+                                'expense': 'Расход',
+                                'transfer': 'Перевод',
+                              },
+                              (v) => _type = v,
+                              width: width,
+                              refreshSheet: refresh,
+                            ),
+                            _filter(
+                              'Счёт',
+                              _account,
+                              accounts,
+                              (v) => _account = v,
+                              width: width,
+                              refreshSheet: refresh,
+                            ),
+                            _filter(
+                              'Категория',
+                              _category,
+                              categories,
+                              (v) => _category = v,
+                              width: width,
+                              refreshSheet: refresh,
+                            ),
+                            _filter(
+                              'Валюта',
+                              _currency,
+                              currencies,
+                              (v) => _currency = v,
+                              width: width,
+                              refreshSheet: refresh,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Период',
+                          style: Theme.of(sheetContext).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          style: _dates == null
+                              ? null
+                              : OutlinedButton.styleFrom(
+                                  backgroundColor: scheme.primaryContainer,
+                                  foregroundColor: scheme.onPrimaryContainer,
+                                  side: BorderSide(
+                                    color: scheme.primaryContainer,
+                                  ),
+                                ),
+                          onPressed: () async {
+                            await _selectDates();
+                            refresh();
+                          },
+                          icon: const Icon(Icons.date_range),
+                          label: Text(
+                            _dates == null
+                                ? 'Выбрать период'
+                                : '${_day(_dates!.start)} — ${_day(_dates!.end)}',
+                          ),
+                        ),
+                        if (_dates != null)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                setState(() => _dates = null);
+                                refresh();
+                              },
+                              child: const Text('Сбросить период'),
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          child: const Text('Показать операции'),
+                        ),
+                        const SizedBox(height: 4),
+                        TextButton(
+                          style: hasFilters
+                              ? TextButton.styleFrom(
+                                  backgroundColor: scheme.primaryContainer,
+                                  foregroundColor: scheme.onPrimaryContainer,
+                                )
+                              : null,
+                          onPressed: hasFilters
+                              ? () {
+                                  setState(() {
+                                    _type = '';
+                                    _account = '';
+                                    _category = '';
+                                    _currency = '';
+                                    _dates = null;
+                                    _search.clear();
+                                  });
+                                  refresh();
+                                }
+                              : null,
+                          child: const Text('Сбросить фильтры'),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                TextButton.icon(
-                  onPressed:
-                      _busy.contains(item.id) ||
-                          item.transferGroupId != null ||
-                          item.transferFeeGroupId != null
-                      ? null
-                      : () => _delete(item),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Удалить'),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _card(
+    TransactionEntry item, {
+    bool details = false,
+    VoidCallback? closeDetails,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final amount = Money.formatStored(item.amount);
+    final accountAmount = Money.formatStored(item.accountAmount);
+    final sign = item.type == 'income' ? '+' : '−';
+    final transfer = item.transferGroupId != null;
+    final canEdit =
+        !_busy.contains(item.id) &&
+        !transfer &&
+        item.transferFeeGroupId == null;
+    final description = item.description?.isNotEmpty == true
+        ? item.description!
+        : transfer
+        ? 'Внутренний перевод'
+        : item.type == 'income'
+        ? 'Доход'
+        : 'Расход';
+    if (!details && MediaQuery.sizeOf(context).width < 560) {
+      return Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: InkWell(
+          onTap: () => _showDetails(item),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    transfer
+                        ? Icons.swap_horiz_rounded
+                        : item.type == 'income'
+                        ? Icons.south_west_rounded
+                        : Icons.north_east_rounded,
+                    size: 20,
+                    color: scheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${item.date} · ${item.accountName}${item.accountActive ? '' : ' · архив'} · ${item.categoryName}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$sign$amount ${item.currency}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final amountWidget = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '$sign$amount ${item.currency}',
+          textAlign: TextAlign.end,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (item.currency != item.accountCurrency)
+          Text(
+            'По счёту: $sign$accountAmount ${item.accountCurrency}',
+            textAlign: TextAlign.end,
+            style: theme.textTheme.bodySmall,
+          ),
+      ],
+    );
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 560;
+            final details = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(description, style: theme.textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text(
+                  '${item.date} · ${item.accountName}${item.accountActive ? '' : ' · архив'} · ${item.categoryName}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (item.postingDate != null)
+                  Text(
+                    'Дата проводки: ${item.postingDate} · код: ${item.bankOperationCode ?? '—'}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (!item.originalAmountKnown)
+                  Text(
+                    'Сумма по счёту; сумма и валюта покупки в выписке не указаны.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (transfer)
+                  Text(
+                    'Внутренний перевод · не доход и не расход',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (item.transferFeeGroupId != null)
+                  Text(
+                    'Комиссия перевода · расход',
+                    style: theme.textTheme.bodySmall,
+                  ),
+              ],
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        transfer
+                            ? Icons.swap_horiz_rounded
+                            : item.type == 'income'
+                            ? Icons.south_west_rounded
+                            : Icons.north_east_rounded,
+                        size: 20,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(child: details),
+                    if (wide) ...[
+                      const SizedBox(width: 20),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: constraints.maxWidth * .38,
+                        ),
+                        child: amountWidget,
+                      ),
+                    ],
+                  ],
+                ),
+                if (!wide) ...[
+                  const SizedBox(height: 12),
+                  Align(alignment: Alignment.centerLeft, child: amountWidget),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: canEdit
+                          ? () {
+                              closeDetails?.call();
+                              _edit(item);
+                            }
+                          : null,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('Изменить'),
+                    ),
+                    TextButton.icon(
+                      onPressed: canEdit
+                          ? () {
+                              closeDetails?.call();
+                              _delete(item);
+                            }
+                          : null,
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Удалить'),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showDetails(TransactionEntry item) {
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * .85,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                  child: Text(
+                    'Детали операции',
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
+                ),
+                _card(
+                  item,
+                  details: true,
+                  closeDetails: () => Navigator.of(sheetContext).pop(),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

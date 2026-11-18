@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -88,10 +89,10 @@ class _TransfersDialogState extends ConsumerState<TransfersDialog> {
       ) ??
       false;
   String _pair(Map<String, dynamic> r) =>
-      '${r['debit_account']}: ${Money.displayStored(r['debit_amount'] as String)} ${r['debit_currency']} → ${r['credit_account']}: ${Money.displayStored(r['credit_amount'] as String)} ${r['credit_currency']}';
+      '${r['debit_account']}: ${Money.formatStored(r['debit_amount'] as String)} ${r['debit_currency']} → ${r['credit_account']}: ${Money.formatStored(r['credit_amount'] as String)} ${r['credit_currency']}';
   Future<void> _openForm(Widget child) async {
     if (_busy || _nav.userId != _owner) return;
-    await showDialog<void>(context: context, builder: (_) => child);
+    await showAdaptiveAction<void>(context: context, builder: (_) => child);
     if (!mounted || _nav.userId != _owner) return;
     ref.invalidate(transferCandidatesProvider);
     ref.invalidate(transferGroupsProvider);
@@ -108,6 +109,10 @@ class _TransfersDialogState extends ConsumerState<TransfersDialog> {
       content: SizedBox(
         width: 760,
         child: ListView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           shrinkWrap: true,
           children: [
             const Text(
@@ -241,7 +246,7 @@ class _TransfersDialogState extends ConsumerState<TransfersDialog> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(_pair(g)),
                       subtitle: Text(
-                        '${g['debit_date']} → ${g['credit_date']}${g['fee_amount'] == null ? '' : ' · комиссия ${Money.displayStored(g['fee_amount'] as String)} ${g['fee_currency']}'}',
+                        '${g['debit_date']} → ${g['credit_date']}${g['fee_amount'] == null ? '' : ' · комиссия ${Money.formatStored(g['fee_amount'] as String)} ${g['fee_currency']}'}',
                       ),
                       trailing: TextButton(
                         onPressed: _busy
@@ -347,12 +352,20 @@ class _ManualTransferFormState extends ConsumerState<ManualTransferForm> {
       content: SizedBox(
         width: 450,
         child: SingleChildScrollView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           child: Form(
             key: _form,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _from,
                   decoration: const InputDecoration(labelText: 'Со счёта'),
                   items: [
@@ -366,6 +379,10 @@ class _ManualTransferFormState extends ConsumerState<ManualTransferForm> {
                   validator: (v) => v == null ? 'Выберите счёт' : null,
                 ),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _to,
                   decoration: const InputDecoration(labelText: 'На счёт'),
                   items: [
@@ -524,7 +541,7 @@ class _LinkTransferFormState extends ConsumerState<LinkTransferForm> {
   }
 
   String _title(TransactionEntry t) =>
-      '${t.date} · ${t.accountName} · ${Money.displayStored(t.accountAmount)} ${t.accountCurrency}';
+      '${t.date} · ${t.accountName} · ${Money.formatStored(t.accountAmount)} ${t.accountCurrency}';
   @override
   Widget build(BuildContext context) {
     final items =
@@ -552,6 +569,10 @@ class _LinkTransferFormState extends ConsumerState<LinkTransferForm> {
               'Выберите списание и поступление с разных счетов. При конвертации проверьте фактические суммы вручную.',
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               initialValue: _debit,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Списание'),
@@ -565,6 +586,10 @@ class _LinkTransferFormState extends ConsumerState<LinkTransferForm> {
               onChanged: _busy ? null : (v) => setState(() => _debit = v),
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               initialValue: _credit,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Поступление'),
@@ -578,6 +603,10 @@ class _LinkTransferFormState extends ConsumerState<LinkTransferForm> {
               onChanged: _busy ? null : (v) => setState(() => _credit = v),
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               key: ValueKey('fee-${debit?.accountId}'),
               initialValue:
                   debit != null &&
@@ -742,6 +771,10 @@ class _CashTransferFormState extends ConsumerState<CashTransferForm> {
               'Выберите существующее списание и наличный кошелёк в той же валюте. Зачисление будет создано автоматически.',
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               initialValue: _debit,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Операция снятия'),
@@ -750,7 +783,7 @@ class _CashTransferFormState extends ConsumerState<CashTransferForm> {
                   DropdownMenuItem(
                     value: t.id,
                     child: Text(
-                      '${t.date} · ${t.accountName} · ${Money.displayStored(t.accountAmount)} ${t.accountCurrency}',
+                      '${t.date} · ${t.accountName} · ${Money.formatStored(t.accountAmount)} ${t.accountCurrency}',
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -758,6 +791,10 @@ class _CashTransferFormState extends ConsumerState<CashTransferForm> {
               onChanged: _busy ? null : (v) => setState(() => _debit = v),
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               initialValue: _wallet,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Наличный кошелёк'),

@@ -1,7 +1,9 @@
+import '../../shared/adaptive_dialog.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/auth_navigation.dart';
+import '../../widgets/currency_selector.dart';
 import '../accounts/money.dart';
 import '../accounts/money_input_formatter.dart';
 import '../settings/currency_repository.dart';
@@ -25,14 +27,14 @@ const _months = [
   'декабрь',
 ];
 const _colors = [
-  Color(0xff008b82),
-  Color(0xff6099db),
-  Color(0xffe39843),
-  Color(0xffa069ce),
-  Color(0xff83a94e),
-  Color(0xffd26b76),
-  Color(0xff5972b7),
-  Color(0xffc89b3f),
+  Color(0xffffd500),
+  Color(0xff242424),
+  Color(0xffffa940),
+  Color(0xff8d7bea),
+  Color(0xff80b89a),
+  Color(0xffef8585),
+  Color(0xff799bd0),
+  Color(0xffc5a45b),
 ];
 String _monthKey(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-01';
@@ -95,7 +97,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   Future<void> _budget(String currency, [AnalyticsRow? row]) async {
     final owner = _owner;
     if (owner == null) return;
-    final changed = await showDialog<bool>(
+    final changed = await showAdaptiveAction<bool>(
       context: context,
       builder: (_) => BudgetDialog(
         owner: owner,
@@ -138,17 +140,18 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           runSpacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('Аналитика', style: theme.textTheme.headlineMedium),
+            Text(
+              'Аналитика',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1.2,
+              ),
+            ),
             currencyValue.when(
-              data: (currency) => DropdownButton<String>(
-                value: supportedCurrencies.contains(currency) ? currency : null,
-                hint: const Text('Валюта'),
-                items: [
-                  for (final code in supportedCurrencies)
-                    DropdownMenuItem(value: code, child: Text(code)),
-                ],
-                onChanged: (v) {
-                  if (v != null && v != currency) _changeCurrency(v);
+              data: (currency) => CurrencySelector(
+                value: currency,
+                onChanged: (value) {
+                  if (value != currency) _changeCurrency(value);
                 },
               ),
               error: (_, _) => TextButton(
@@ -270,7 +273,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final overview = Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -298,7 +301,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                           children: [
                             CustomPaint(
                               size: const Size(176, 176),
-                              painter: _DonutPainter(chartRows),
+                              painter: _DonutPainter(
+                                chartRows,
+                                theme.brightness == Brightness.dark,
+                              ),
                             ),
                             Text(
                               _months[_month.month - 1],
@@ -353,7 +359,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                         ),
                       ),
                     for (var i = 0; i < rows.length; i++)
-                      _category(rows[i], currency, _colors[i % _colors.length]),
+                      _category(
+                        rows[i],
+                        currency,
+                        _chartColor(i, theme.brightness == Brightness.dark),
+                      ),
                   ],
                 );
                 if (constraints.maxWidth >= 720) {
@@ -405,79 +415,98 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         : (row.spent.toDouble() / limit.toDouble()).clamp(0.0, 1.0);
     final exceeded = limit != null && row.spent > limit;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: .16),
-              borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: theme.brightness == Brightness.dark
+              ? const Color(0xff292929)
+              : const Color(0xfff5f5f2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .16),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(_categoryIcon(row), color: color),
             ),
-            child: Icon(_categoryIcon(row), color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(row.name, style: theme.textTheme.titleMedium),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        '${analyticsAmount(row.spent)} $currency',
-                        textAlign: TextAlign.end,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: exceeded ? theme.colorScheme.error : null,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          row.name,
+                          style: theme.textTheme.titleMedium,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${row.count} оп. ${limit == null ? '' : '· лимит ${analyticsAmount(limit)} $currency'}',
-                  style: theme.textTheme.bodySmall,
-                ),
-                if (limit != null) ...[
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: ratio,
-                    color: exceeded ? theme.colorScheme.error : color,
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          '${analyticsAmount(row.spent)} $currency',
+                          textAlign: TextAlign.end,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: exceeded ? theme.colorScheme.error : null,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    exceeded
-                        ? 'Превышение ${analyticsAmount(row.spent - limit)} $currency'
-                        : 'Осталось ${analyticsAmount(limit - row.spent)} $currency',
+                    '${row.count} оп. ${limit == null ? '' : '· лимит ${analyticsAmount(limit)} $currency'}',
                     style: theme.textTheme.bodySmall,
                   ),
+                  if (limit != null) ...[
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: ratio,
+                      color: exceeded ? theme.colorScheme.error : color,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      exceeded
+                          ? 'Превышение ${analyticsAmount(row.spent - limit)} $currency'
+                          : 'Осталось ${analyticsAmount(limit - row.spent)} $currency',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          if (_expense)
-            IconButton(
-              tooltip: limit == null ? 'Установить бюджет' : 'Изменить бюджет',
-              onPressed: () => _budget(currency, row),
-              icon: const Icon(Icons.edit_outlined),
-            ),
-        ],
+            if (_expense)
+              IconButton(
+                tooltip: limit == null
+                    ? 'Установить бюджет'
+                    : 'Изменить бюджет',
+                onPressed: () => _budget(currency, row),
+                icon: const Icon(Icons.edit_outlined),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
+Color _chartColor(int index, bool dark) => dark && index % _colors.length == 1
+    ? const Color(0xffe4e4dc)
+    : _colors[index % _colors.length];
+
 class _DonutPainter extends CustomPainter {
-  _DonutPainter(this.rows);
+  _DonutPainter(this.rows, this.dark);
   final List<AnalyticsRow> rows;
+  final bool dark;
   @override
   void paint(Canvas canvas, Size size) {
     final total = rows
@@ -494,7 +523,7 @@ class _DonutPainter extends CustomPainter {
         sweep,
         false,
         Paint()
-          ..color = _colors[i % _colors.length]
+          ..color = _chartColor(i, dark)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 24,
       );
@@ -504,7 +533,7 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) =>
-      oldDelegate.rows != rows;
+      oldDelegate.rows != rows || oldDelegate.dark != dark;
 }
 
 class BudgetDialog extends ConsumerStatefulWidget {
@@ -600,6 +629,10 @@ class _BudgetDialogState extends ConsumerState<BudgetDialog> {
         child: Form(
           key: _form,
           child: SingleChildScrollView(
+            controller: ActionSheetScroll.maybeOf(context),
+            physics: ActionSheetScroll.maybeOf(context) == null
+                ? null
+                : const AlwaysScrollableScrollPhysics(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,6 +655,10 @@ class _BudgetDialogState extends ConsumerState<BudgetDialog> {
                         .where((e) => e.kind == 'expense')
                         .toList();
                     return DropdownButtonFormField<String>(
+                      borderRadius: BorderRadius.circular(16),
+                      dropdownColor: Theme.of(context).colorScheme.surface,
+                      menuMaxHeight: 320,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       initialValue: options.any((e) => e.id == _category)
                           ? _category
                           : null,
@@ -646,6 +683,10 @@ class _BudgetDialogState extends ConsumerState<BudgetDialog> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _currency,
                   decoration: const InputDecoration(labelText: 'Валюта лимита'),
                   items: [

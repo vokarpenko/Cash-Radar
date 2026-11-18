@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -112,6 +113,10 @@ class _AccountFormState extends ConsumerState<AccountForm> {
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           child: Form(
             key: _form,
             child: Column(
@@ -126,6 +131,10 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                       v == null || v.trim().isEmpty ? 'Введите название' : null,
                 ),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _type,
                   decoration: const InputDecoration(labelText: 'Тип'),
                   items: const [
@@ -161,6 +170,10 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                       ),
                     ),
                     data: (items) => DropdownButtonFormField<String>(
+                      borderRadius: BorderRadius.circular(16),
+                      dropdownColor: Theme.of(context).colorScheme.surface,
+                      menuMaxHeight: 320,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       initialValue: items.any((b) => b.id == _bankId)
                           ? _bankId
                           : null,
@@ -179,6 +192,10 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                     ),
                   ),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: supportedCurrencies.contains(_currency)
                       ? _currency
                       : null,

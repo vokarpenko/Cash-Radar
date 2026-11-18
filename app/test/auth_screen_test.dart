@@ -20,6 +20,38 @@ void main() {
     await tester.enterText(find.byType(TextFormField).last, password);
   }
 
+  testWidgets('dismisses keyboard when tapping outside the form', (
+    tester,
+  ) async {
+    await tester.pumpWidget(CashRadarApp(auth: auth));
+    await tester.tap(find.byType(TextFormField).first);
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
+
+  testWidgets('toggles password visibility', (tester) async {
+    await tester.pumpWidget(CashRadarApp(auth: auth));
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).obscureText,
+      isTrue,
+    );
+    await tester.tap(find.byTooltip('Показать пароль'));
+    await tester.pump();
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).obscureText,
+      isFalse,
+    );
+    await tester.tap(find.byTooltip('Скрыть пароль'));
+    await tester.pump();
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).obscureText,
+      isTrue,
+    );
+  });
+
   testWidgets('registers and asks for email confirmation', (tester) async {
     await tester.pumpWidget(CashRadarApp(auth: auth));
     await tester.tap(find.text('Создать аккаунт'));

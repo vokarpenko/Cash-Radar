@@ -1,0 +1,129 @@
+import 'package:flutter/material.dart';
+
+import '../features/accounts/money.dart';
+
+class CurrencySelector extends StatefulWidget {
+  const CurrencySelector({
+    required this.value,
+    required this.onChanged,
+    super.key,
+  });
+
+  final String? value;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  State<CurrencySelector> createState() => _CurrencySelectorState();
+}
+
+class _CurrencySelectorState extends State<CurrencySelector> {
+  bool _hovered = false;
+
+  static const _names = {
+    'AMD': 'Армянский драм',
+    'RUB': 'Российский рубль',
+    'USD': 'Доллар США',
+    'EUR': 'Евро',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final selected = supportedCurrencies.contains(widget.value)
+        ? widget.value
+        : null;
+    final hoverColor = theme.brightness == Brightness.dark
+        ? const Color(0xff383838)
+        : const Color(0xffe8e8e4);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Theme(
+        data: theme.copyWith(
+          hoverColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashFactory: NoSplash.splashFactory,
+        ),
+        child: PopupMenuButton<String>(
+          tooltip: '',
+          borderRadius: BorderRadius.circular(12),
+          enabled: widget.onChanged != null,
+          onSelected: widget.onChanged,
+          position: PopupMenuPosition.under,
+          offset: const Offset(0, 8),
+          color: scheme.surface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 8,
+          constraints: const BoxConstraints(minWidth: 240, maxWidth: 280),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          itemBuilder: (context) => [
+            for (final code in supportedCurrencies)
+              PopupMenuItem<String>(
+                value: code,
+                height: 56,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 42,
+                      child: Text(
+                        code,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        _names[code] ?? code,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                    if (code == selected)
+                      Icon(Icons.check_circle, size: 20, color: scheme.primary),
+                  ],
+                ),
+              ),
+          ],
+          child: Semantics(
+            label: 'Валюта: ${selected ?? 'не выбрана'}',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Ink(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: _hovered && widget.onChanged != null
+                      ? hoverColor
+                      : scheme.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      selected ?? 'Валюта',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: scheme.onSurface,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

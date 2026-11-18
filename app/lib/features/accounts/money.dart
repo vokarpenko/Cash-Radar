@@ -29,6 +29,25 @@ class Money {
     return '${parts[0]}.${fraction.padRight(2, '0')}';
   }
 
+  /// Formats a stored amount for read-only display without losing precision.
+  static String formatStored(String value) => groupDigits(displayStored(value));
+
+  /// Groups the integer part of a decimal string with non-breaking spaces.
+  static String groupDigits(String value) {
+    if (!RegExp(r'^[-−]?\d+(?:\.\d+)?$').hasMatch(value)) return value;
+    final parts = value.split('.');
+    final hasSign = parts.first.startsWith('-') || parts.first.startsWith('−');
+    final sign = hasSign ? parts.first.substring(0, 1) : '';
+    final digits = hasSign ? parts.first.substring(1) : parts.first;
+    final result = StringBuffer(sign);
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) result.write('\u00a0');
+      result.write(digits[i]);
+    }
+    if (parts.length == 2) result.write('.${parts[1]}');
+    return result.toString();
+  }
+
   String get display => displayStored(value);
 }
 

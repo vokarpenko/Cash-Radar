@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -167,6 +168,10 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           child: Form(
             key: _form,
             child: Column(
@@ -174,6 +179,10 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _type,
                   decoration: const InputDecoration(labelText: 'Тип операции'),
                   items: const [
@@ -197,6 +206,10 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                     child: const Text('Не удалось загрузить счета. Повторить'),
                   ),
                   data: (_) => DropdownButtonFormField<String>(
+                    borderRadius: BorderRadius.circular(16),
+                    dropdownColor: Theme.of(context).colorScheme.surface,
+                    menuMaxHeight: 320,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
                     isExpanded: true,
                     initialValue: account?.id,
                     decoration: const InputDecoration(labelText: 'Счёт'),
@@ -246,6 +259,10 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                     ),
                   ),
                   data: (_) => DropdownButtonFormField<String>(
+                    borderRadius: BorderRadius.circular(16),
+                    dropdownColor: Theme.of(context).colorScheme.surface,
+                    menuMaxHeight: 320,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
                     isExpanded: true,
                     key: ValueKey('category-$_type'),
                     initialValue: selectedCategory,
@@ -264,6 +281,10 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                   ),
                 ),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   key: ValueKey('currency-$_currency'),
                   initialValue: supportedCurrencies.contains(_currency)
                       ? _currency

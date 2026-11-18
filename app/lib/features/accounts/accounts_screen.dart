@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,7 +18,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   final Set<String> _busy = {};
 
   Future<void> _edit([AccountSummary? account]) async {
-    await showDialog<bool>(
+    await showAdaptiveAction<bool>(
       context: context,
       builder: (_) => AccountForm(account: account),
     );
@@ -141,7 +142,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                     'cash' => 'Наличные',
                     _ => 'Кошелёк',
                   };
-                  final balance = Money.displayStored(account.currentBalance);
+                  final balance = Money.formatStored(account.currentBalance);
                   return Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),

@@ -85,8 +85,11 @@ void main() {
     repository = MemoryTransactions();
   });
   tearDown(() => auth.controller.close());
-  Future<void> open(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1200, 1000);
+  Future<void> open(
+    WidgetTester tester, {
+    Size size = const Size(1200, 1000),
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -105,6 +108,44 @@ void main() {
     GoRouter.of(tester.element(find.byType(AppShell))).go('/transactions');
     await tester.pumpAndSettle();
   }
+
+  testWidgets('mobile filters and operation details are available on demand', (
+    tester,
+  ) async {
+    repository.entries.add(
+      repository.entry(
+        'mobile',
+        const TransactionInput(
+          accountId: 'a1',
+          categoryId: 'food',
+          type: 'expense',
+          date: '2026-11-10',
+          amount: '12',
+          currency: 'AMD',
+          accountAmount: '12',
+          accountCurrency: 'AMD',
+          description: 'Покупка',
+        ),
+      ),
+    );
+    await open(tester, size: const Size(390, 800));
+    expect(find.byKey(const ValueKey('transaction-filter-Тип')), findsNothing);
+    await tester.tap(find.byTooltip('Показать фильтры'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(BottomSheet)).width, 390);
+    expect(
+      find.byKey(const ValueKey('transaction-filter-Тип')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Показать операции'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Покупка'));
+    await tester.pumpAndSettle();
+    expect(find.text('Детали операции'), findsOneWidget);
+    expect(tester.getSize(find.byType(BottomSheet)).width, 390);
+    expect(find.text('Изменить'), findsOneWidget);
+    expect(find.text('Удалить'), findsOneWidget);
+  });
 
   Finder dropdown(int index) => find
       .descendant(
@@ -326,7 +367,7 @@ void main() {
       ),
     );
     await open(tester);
-    await tester.tap(find.byType(DropdownButtonFormField<String>).at(0));
+    await tester.tap(find.byKey(const ValueKey('transaction-filter-Тип')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Доход').last);
     await tester.pumpAndSettle();
@@ -334,7 +375,7 @@ void main() {
     expect(find.text('Покупка'), findsNothing);
     await tester.tap(find.text('Сбросить фильтры'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButtonFormField<String>).at(3));
+    await tester.tap(find.byKey(const ValueKey('transaction-filter-Валюта')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('EUR').last);
     await tester.pumpAndSettle();

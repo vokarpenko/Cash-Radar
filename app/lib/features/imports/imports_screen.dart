@@ -434,6 +434,10 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                     child: const Text('Не удалось загрузить счета. Повторить'),
                   ),
                   data: (_) => DropdownButtonFormField<String>(
+                    borderRadius: BorderRadius.circular(16),
+                    dropdownColor: Theme.of(context).colorScheme.surface,
+                    menuMaxHeight: 320,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
                     key: ValueKey('import-account-${chosen?.id}'),
                     initialValue: chosen?.id,
                     isExpanded: true,
@@ -674,7 +678,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                             }}',
                           ),
                         Text(
-                          '${row.type == 'income' ? '+' : '−'}${Money.displayStored(row.amount)} ${row.currency}',
+                          '${row.type == 'income' ? '+' : '−'}${Money.formatStored(row.amount)} ${row.currency}',
                         ),
                         if (batch.status == 'ready' &&
                             (row.candidates.isNotEmpty ||
@@ -718,7 +722,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                         ],
                         if (row.commissionAmount != null)
                           Text(
-                            'Комиссия: −${Money.displayStored(row.commissionAmount!)} ${batch.accountCurrency} · отдельная операция',
+                            'Комиссия: −${Money.formatStored(row.commissionAmount!)} ${batch.accountCurrency} · отдельная операция',
                           ),
                       ],
                     ),
@@ -731,7 +735,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                   (r) => r.currency != batch.accountCurrency,
                 ))
                   Text(
-                    'Строка ${row.rowNumber}, по счёту: ${Money.displayStored(row.accountAmount)} ${batch.accountCurrency}',
+                    'Строка ${row.rowNumber}, по счёту: ${Money.formatStored(row.accountAmount)} ${batch.accountCurrency}',
                   ),
                 const SizedBox(height: 12),
                 Wrap(

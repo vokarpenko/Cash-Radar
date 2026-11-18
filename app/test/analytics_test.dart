@@ -121,7 +121,7 @@ void main() {
     );
     expect(
       analyticsAmount(BigInt.parse('-123456789')),
-      '−1\u202f234\u202f567.89',
+      '−1\u00a0234\u00a0567.89',
     );
   });
   testWidgets(
