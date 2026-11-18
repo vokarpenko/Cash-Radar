@@ -67,7 +67,7 @@ jobs:
           deno-version: v2.x
       - name: Check and test parsers and categorization
         run: |
-          deno check supabase/functions/categorize-merchant/index.ts supabase/functions/gmail-collector/index.ts
+          deno check supabase/functions/categorize-merchant/index.ts supabase/functions/gmail-collector/index.ts supabase/functions/exchange-rates/index.ts
           deno test --allow-read \
             supabase/tests/import_parser_test.ts \
             supabase/tests/ameria_parser_test.ts \
@@ -75,7 +75,8 @@ jobs:
             supabase/tests/alfa_parser_test.ts \
             supabase/tests/ai_categorization_test.ts \
             supabase/tests/gmail_transport_test.ts \
-            supabase/tests/gmail_poll_test.ts
+            supabase/tests/gmail_poll_test.ts \
+            supabase/tests/exchange_rates_test.ts
 
   database-tests:
     name: Local database migration and SQL tests
@@ -97,7 +98,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category internal_transfers alfa_import alfa_categories gmail_collector notification_events; do
+          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category internal_transfers alfa_import alfa_categories gmail_collector notification_events budget_versions monthly_analytics; do
             echo "Testing ${test}"
             docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
               -v ON_ERROR_STOP=1 < "supabase/tests/${test}.sql"
@@ -106,6 +107,7 @@ jobs:
           python3 supabase/tests/transfer_api_e2e.py
           python3 scripts/test_local_gmail.py
           python3 supabase/tests/notification_api_e2e.py
+          python3 supabase/tests/budget_api_e2e.py
 
   deploy:
     name: Deploy production Supabase
@@ -157,5 +159,7 @@ jobs:
         run: supabase functions deploy import-statement --remote="$PROJECT_REF" --use-api --yes
       - name: Deploy Gmail collector
         run: supabase functions deploy gmail-collector --remote="$PROJECT_REF" --use-api --yes
+      - name: Deploy exchange rates
+        run: supabase functions deploy exchange-rates --remote="$PROJECT_REF" --use-api --yes
       - name: Deploy AI categorization
         run: supabase functions deploy categorize-merchant --remote="$PROJECT_REF" --use-api --yes

@@ -12,6 +12,12 @@ const _destinations = [
     selected: Icons.space_dashboard,
   ),
   (
+    path: '/analytics',
+    label: 'Аналитика',
+    icon: Icons.pie_chart_outline,
+    selected: Icons.pie_chart,
+  ),
+  (
     path: '/accounts',
     label: 'Счета',
     icon: Icons.account_balance_wallet_outlined,

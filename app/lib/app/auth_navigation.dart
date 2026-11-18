@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../features/accounts/accounts_repository.dart';
+import '../features/analytics/analytics_repository.dart';
 import '../features/auth/auth_service.dart';
 import '../features/imports/import_repository.dart';
 import '../features/notifications/notification_bridge.dart';
@@ -81,6 +82,7 @@ final authNavigationProvider = Provider<AuthNavigation>(
       initialRecovery: ref.watch(initialRecoveryProvider),
       onIdentityChanged: () {
         ref.invalidate(accountsProvider);
+        ref.invalidate(monthlyAnalyticsProvider);
         ref.invalidate(baseCurrencyProvider);
         ref.invalidate(transactionsProvider);
         ref.invalidate(pendingNotificationsProvider);
@@ -98,6 +100,7 @@ final authNavigationProvider = Provider<AuthNavigation>(
     authServiceProvider,
     initialRecoveryProvider,
     accountsProvider,
+    monthlyAnalyticsProvider,
     baseCurrencyProvider,
     transactionsProvider,
     pendingNotificationsProvider,
