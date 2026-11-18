@@ -279,88 +279,96 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
     );
     return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 780;
-            return SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: wide ? 32 : 24,
-                vertical: wide ? 32 : 24,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: (constraints.maxHeight - (wide ? 64 : 48)).clamp(
-                    0,
-                    double.infinity,
-                  ),
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= 780;
+              return SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: wide ? 32 : 24,
+                  vertical: wide ? 32 : 24,
                 ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: wide ? 900 : 420),
-                    child: wide
-                        ? Card(
-                            child: IntrinsicHeight(
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(40),
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.yellow,
-                                      ),
-                                      child: const Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.circle,
-                                            color: AppColors.ink,
-                                            size: 32,
-                                          ),
-                                          SizedBox(height: 28),
-                                          Text(
-                                            'CashRadar',
-                                            style: TextStyle(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: (constraints.maxHeight - (wide ? 64 : 48)).clamp(
+                      0,
+                      double.infinity,
+                    ),
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: wide ? 900 : 420),
+                      child: wide
+                          ? Card(
+                              child: IntrinsicHeight(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(40),
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.yellow,
+                                        ),
+                                        child: const Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.circle,
                                               color: AppColors.ink,
-                                              fontSize: 32,
-                                              fontWeight: FontWeight.w800,
+                                              size: 32,
                                             ),
-                                          ),
-                                          SizedBox(height: 12),
-                                          Text(
-                                            'Ваши финансы в одном месте',
-                                            style: TextStyle(
-                                              color: AppColors.ink,
-                                              fontSize: 16,
+                                            SizedBox(height: 28),
+                                            Text(
+                                              'CashRadar',
+                                              style: TextStyle(
+                                                color: AppColors.ink,
+                                                fontSize: 32,
+                                                fontWeight: FontWeight.w800,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                            SizedBox(height: 12),
+                                            Text(
+                                              'Ваши финансы в одном месте',
+                                              style: TextStyle(
+                                                color: AppColors.ink,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(40),
-                                      child: form,
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(40),
+                                        child: form,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                brand,
+                                const SizedBox(height: 48),
+                                form,
+                              ],
                             ),
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [brand, const SizedBox(height: 48), form],
-                          ),
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
