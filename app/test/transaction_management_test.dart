@@ -129,17 +129,47 @@ void main() {
         ),
       );
       await open(tester);
-      expect(find.text('Предварительные уведомления (1)'), findsOneWidget);
-      await tester.tap(find.text('Предварительные уведомления (1)'));
+      expect(find.text('Уведомления (1)'), findsOneWidget);
+      expect(find.text('Synthetic Store'), findsNothing);
+      await tester.tap(find.text('Уведомления (1)'));
       await tester.pumpAndSettle();
-      expect(find.text('Завершение холда · Synthetic Store'), findsOneWidget);
+      expect(find.text('Synthetic Store'), findsOneWidget);
+      expect(find.textContaining('Завершение холда'), findsOneWidget);
       expect(repository.entries, isEmpty);
       await tester.tap(find.byTooltip('Скрыть уведомление'));
       await tester.pumpAndSettle();
-      expect(find.text('Предварительные уведомления (1)'), findsNothing);
+      expect(find.text('Новых уведомлений нет'), findsOneWidget);
+      await tester.tap(find.byTooltip('Закрыть'));
+      await tester.pumpAndSettle();
+      expect(find.text('Уведомления (1)'), findsNothing);
       expect(repository.entries, isEmpty);
     },
   );
+
+  testWidgets('opens pending notifications on a narrow screen', (tester) async {
+    repository.pending.add(
+      const PendingNotification(
+        id: 'mobile-pending',
+        source: 'wallet',
+        kind: 'purchase',
+        amount: '42.00',
+        currency: 'AMD',
+        merchant: 'Synthetic Shop',
+        cardLast4: '1111',
+        occurredAt: '2026-11-17T12:00:00Z',
+        timeSource: 'notification',
+      ),
+    );
+    await open(tester);
+    tester.view.physicalSize = const Size(360, 800);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Предварительные уведомления (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Synthetic Shop'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('Закрыть'));
+    await tester.pumpAndSettle();
+  });
 
   testWidgets(
     'creates, edits and deletes a foreign currency expense with confirmation',

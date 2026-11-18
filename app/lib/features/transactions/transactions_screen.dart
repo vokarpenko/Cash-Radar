@@ -6,6 +6,7 @@ import '../../shared/section_state.dart';
 import '../accounts/accounts_repository.dart';
 import '../accounts/money.dart';
 import 'transaction_form.dart';
+import 'pending_notifications_dialog.dart';
 import '../transfers/transfers_dialog.dart';
 import 'transactions_repository.dart';
 
@@ -105,6 +106,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
   }
 
+  void _openNotifications() {
+    final owner = _userId;
+    if (owner == null) return;
+    showDialog<void>(
+      context: context,
+      builder: (_) => PendingNotificationsDialog(owner: owner),
+    );
+  }
+
   Future<void> _selectDates() async {
     final result = await showDateRangePicker(
       context: context,
@@ -171,6 +181,25 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 ),
               ],
             ),
+            pending.maybeWhen(
+              data: (items) => items.isEmpty
+                  ? const SizedBox.shrink()
+                  : MediaQuery.sizeOf(context).width < 500
+                  ? IconButton(
+                      tooltip: 'Предварительные уведомления (${items.length})',
+                      onPressed: _openNotifications,
+                      icon: Badge(
+                        label: Text('${items.length}'),
+                        child: const Icon(Icons.notifications_none_outlined),
+                      ),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: _openNotifications,
+                      icon: const Icon(Icons.notifications_none_outlined),
+                      label: Text('Уведомления (${items.length})'),
+                    ),
+              orElse: () => const SizedBox.shrink(),
+            ),
             if (MediaQuery.sizeOf(context).width < 500)
               IconButton(
                 tooltip: 'Переводы',
@@ -201,96 +230,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 label: const Text('Добавить операцию'),
               ),
           ],
-        ),
-        pending.maybeWhen(
-          data: (items) => items.isEmpty
-              ? const SizedBox.shrink()
-              : Card(
-                  child: ExpansionTile(
-                    title: Text(
-                      'Предварительные уведомления (${items.length})',
-                    ),
-                    subtitle: const Text(
-                      'Не влияют на остатки. Возможны совпадения с выпиской и уведомлениями других приложений.',
-                    ),
-                    children: [
-                      SizedBox(
-                        height: items.length > 2 ? 220 : items.length * 100.0,
-                        child: ListView.builder(
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            final kind = switch (item.kind) {
-                              'pre_purchase' => 'Холд',
-                              'pre_purchase_completion' => 'Завершение холда',
-                              'credit' => 'Зачисление или перевод',
-                              _ => 'Покупка',
-                            };
-                            final source = switch (item.source) {
-                              'wallet' => 'Google Wallet',
-                              'ameria' => 'My Ameria',
-                              'acba' => 'acba digital',
-                              _ => item.source,
-                            };
-                            final when = DateTime.tryParse(
-                              item.occurredAt,
-                            )?.toLocal();
-                            return ListTile(
-                              title: Text('$kind · ${item.merchant}'),
-                              subtitle: Text(
-                                '$source · ••${item.cardLast4} · ${when == null ? item.occurredAt : '${_day(when)} ${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}'}${item.timeSource == 'notification' ? ' · дата уведомления' : ''}',
-                              ),
-                              trailing: Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Text(
-                                    '${Money.displayStored(item.amount)} ${item.currency}',
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Скрыть уведомление',
-                                    onPressed: () async {
-                                      final owner = _userId;
-                                      try {
-                                        await ref
-                                            .read(
-                                              transactionsRepositoryProvider,
-                                            )
-                                            .dismissNotification(item.id);
-                                        if (mounted && owner == _userId) {
-                                          ref.invalidate(
-                                            pendingNotificationsProvider(
-                                              owner ?? '',
-                                            ),
-                                          );
-                                        }
-                                      } catch (_) {
-                                        if (context.mounted &&
-                                            mounted &&
-                                            owner == _userId) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Не удалось скрыть уведомление.',
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    },
-                                    icon: const Icon(Icons.close),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-          orElse: () => const SizedBox.shrink(),
         ),
         const SizedBox(height: 12),
         Expanded(
