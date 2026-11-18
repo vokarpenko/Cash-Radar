@@ -259,7 +259,7 @@ void main() {
     expect(find.text('Предпросмотр: test.csv'), findsOneWidget);
     expect(find.text('Счёт: Мой счёт · Ameria Bank'), findsOneWidget);
     expect(find.text('−12.34 EUR'), findsOneWidget);
-    expect(find.text('Строка 2, по счёту: 5000.00 AMD'), findsOneWidget);
+    expect(find.text('Строка 2, по счёту: 5 000.00 AMD'), findsOneWidget);
     await Scrollable.ensureVisible(
       tester.element(find.text('Подтвердить импорт')),
       alignment: 0.5,

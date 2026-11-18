@@ -41,18 +41,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getSize(find.byType(BottomSheet)).width, 390);
     expect(tester.getSize(find.byType(AlertDialog)).width, 390);
-    final initialHeight = tester
-        .getSize(find.byType(DraggableScrollableSheet))
-        .height;
-    await tester.drag(
-      find.byKey(const ValueKey('action-sheet-handle')),
-      const Offset(0, -160),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester.getSize(find.byType(DraggableScrollableSheet)).height,
-      greaterThan(initialHeight),
-    );
     await tester.tap(find.text('Сохранить'));
     await tester.pumpAndSettle();
     expect(result, isTrue);

@@ -181,7 +181,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Зарплата'), findsOneWidget);
       expect(find.text('Еда'), findsNothing);
-      await tester.tap(find.byType(DropdownButton<String>));
+      await tester.tap(find.text('AMD').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('RUB').last);
       await tester.pumpAndSettle();

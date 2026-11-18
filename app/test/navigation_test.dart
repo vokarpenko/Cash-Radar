@@ -154,7 +154,8 @@ void main() {
     await tester.tap(find.text('Ещё'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Импорт'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
     expect(
       GoRouter.of(
         tester.element(find.byType(AppShell)),

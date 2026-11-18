@@ -144,7 +144,7 @@ void main() {
       await tester.tap(find.text('Сохранить'));
       await tester.pumpAndSettle();
       expect(accounts.lastInput!.initialBalance, '999999999999999999.99');
-      expect(find.text('999999999999999999.99 AMD'), findsOneWidget);
+      expect(find.text('999 999 999 999 999 999.99 AMD'), findsOneWidget);
       await tester.tap(find.text('Изменить'));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -225,7 +225,7 @@ void main() {
     await tester.pumpAndSettle();
     router.go('/accounts');
     await tester.pumpAndSettle();
-    expect(find.text('999999999999999999.99 AMD'), findsOneWidget);
+    expect(find.text('999 999 999 999 999 999.99 AMD'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
