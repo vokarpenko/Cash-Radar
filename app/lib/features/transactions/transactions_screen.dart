@@ -167,7 +167,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          alignment: WrapAlignment.spaceBetween,
+          spacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           runSpacing: 12,
           children: [
@@ -235,7 +235,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 24),
         Expanded(
           child: transactions.when(
             skipLoadingOnRefresh: false,
@@ -299,14 +299,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   TextField(
                     controller: _search,
                     onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(
-                      labelText: 'Поиск',
-                      prefixIcon: Icon(Icons.search),
+                    decoration: InputDecoration(
+                      hintText: 'Поиск по операциям, счетам и категориям',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surface,
                     ),
                   ),
+                  const SizedBox(height: 20),
                   Wrap(
                     spacing: 12,
-                    runSpacing: 8,
+                    runSpacing: 16,
                     children: [
                       _filter('Тип', _type, {
                         'income': 'Доход',
@@ -353,7 +356,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
+                  if (filtered.isNotEmpty) ...[
+                    Text(
+                      'История операций',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   if (filtered.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -378,74 +388,140 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   Widget _card(TransactionEntry item) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final amount = Money.displayStored(item.amount);
     final accountAmount = Money.displayStored(item.accountAmount);
     final sign = item.type == 'income' ? '+' : '−';
+    final transfer = item.transferGroupId != null;
+    final canEdit =
+        !_busy.contains(item.id) &&
+        !transfer &&
+        item.transferFeeGroupId == null;
+    final description = item.description?.isNotEmpty == true
+        ? item.description!
+        : transfer
+        ? 'Внутренний перевод'
+        : item.type == 'income'
+        ? 'Доход'
+        : 'Расход';
+    final amountWidget = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '$sign$amount ${item.currency}',
+          textAlign: TextAlign.end,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (item.currency != item.accountCurrency)
+          Text(
+            'По счёту: $sign$accountAmount ${item.accountCurrency}',
+            textAlign: TextAlign.end,
+            style: theme.textTheme.bodySmall,
+          ),
+      ],
+    );
     return Card(
+      margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.description?.isNotEmpty == true
-                  ? item.description!
-                  : (item.transferGroupId != null
-                        ? 'Внутренний перевод'
-                        : item.type == 'income'
-                        ? 'Доход'
-                        : 'Расход'),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${item.date} · ${item.accountName}${item.accountActive ? '' : ' · архив'} · ${item.categoryName}',
-            ),
-            if (item.postingDate != null)
-              Text(
-                'Дата проводки: ${item.postingDate} · код: ${item.bankOperationCode ?? '—'}',
-              ),
-            if (!item.originalAmountKnown)
-              const Text(
-                'Сумма по счёту; сумма и валюта покупки в выписке не указаны.',
-              ),
-            if (item.transferGroupId != null)
-              const Text('Внутренний перевод · не доход и не расход'),
-            if (item.transferFeeGroupId != null)
-              const Text('Комиссия перевода · расход'),
-            const SizedBox(height: 8),
-            Text(
-              '$sign$amount ${item.currency}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            if (item.currency != item.accountCurrency)
-              Text('По счёту: $sign$accountAmount ${item.accountCurrency}'),
-            Wrap(
-              spacing: 8,
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 560;
+            final details = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextButton.icon(
-                  onPressed:
-                      _busy.contains(item.id) ||
-                          item.transferGroupId != null ||
-                          item.transferFeeGroupId != null
-                      ? null
-                      : () => _edit(item),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Изменить'),
+                Text(description, style: theme.textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text(
+                  '${item.date} · ${item.accountName}${item.accountActive ? '' : ' · архив'} · ${item.categoryName}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
-                TextButton.icon(
-                  onPressed:
-                      _busy.contains(item.id) ||
-                          item.transferGroupId != null ||
-                          item.transferFeeGroupId != null
-                      ? null
-                      : () => _delete(item),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Удалить'),
+                if (item.postingDate != null)
+                  Text(
+                    'Дата проводки: ${item.postingDate} · код: ${item.bankOperationCode ?? '—'}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (!item.originalAmountKnown)
+                  Text(
+                    'Сумма по счёту; сумма и валюта покупки в выписке не указаны.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (transfer)
+                  Text(
+                    'Внутренний перевод · не доход и не расход',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (item.transferFeeGroupId != null)
+                  Text(
+                    'Комиссия перевода · расход',
+                    style: theme.textTheme.bodySmall,
+                  ),
+              ],
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        transfer
+                            ? Icons.swap_horiz_rounded
+                            : item.type == 'income'
+                            ? Icons.south_west_rounded
+                            : Icons.north_east_rounded,
+                        size: 20,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(child: details),
+                    if (wide) ...[
+                      const SizedBox(width: 20),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: constraints.maxWidth * .38,
+                        ),
+                        child: amountWidget,
+                      ),
+                    ],
+                  ],
+                ),
+                if (!wide) ...[
+                  const SizedBox(height: 12),
+                  Align(alignment: Alignment.centerLeft, child: amountWidget),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: canEdit ? () => _edit(item) : null,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('Изменить'),
+                    ),
+                    TextButton.icon(
+                      onPressed: canEdit ? () => _delete(item) : null,
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Удалить'),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
