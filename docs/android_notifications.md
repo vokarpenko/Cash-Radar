@@ -17,7 +17,7 @@ CashRadar может получать новые уведомления Google W
 
 ## Проверка
 
-Парсеры используют только обезличенные фикстуры в `NotificationParserTest`. `supabase/tests/notification_events.sql` и `supabase/tests/notification_api_e2e.py` проверяют изоляцию пользователей, отсутствие влияния на баланс, повторную отправку и отзыв устройства. Android-сборка и тесты парсеров запускаются в GitHub Actions.
+Парсеры используют только обезличенные фикстуры в `NotificationParserTest`. `supabase/tests/notification_events.sql` и `supabase/tests/notification_api_e2e.py` проверяют изоляцию пользователей, отсутствие влияния на баланс, повторную отправку и отзыв устройства. Android-сборка и тесты парсеров временно отключены в GitHub Actions; их можно запустить локально из `app/android` командой `./gradlew :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin`.
 
 Для эмулятора создайте игнорируемый `app/config/local-android-emulator.json` на основе локальной конфигурации: URL `http://10.0.2.2:54321`, публичный ключ локального Supabase и `ALLOW_INSECURE_LOCAL_SUPABASE=true`. Запускайте `flutter run -d emulator-5554 --dart-define-from-file=config/local-android-emulator.json`. Локальный Supabase и production независимы.
 

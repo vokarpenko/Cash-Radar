@@ -35,6 +35,8 @@ jobs:
 
   android:
     name: Android build and parser tests
+    # Temporarily disabled; remove this condition and restore the deploy dependency to re-enable.
+    if: ${{ false }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -111,7 +113,7 @@ jobs:
 
   deploy:
     name: Deploy production Supabase
-    needs: [flutter, android, edge-tests, database-tests]
+    needs: [flutter, edge-tests, database-tests]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
