@@ -136,7 +136,7 @@ void main() {
       find.byKey(const ValueKey('transaction-filter-Тип')),
       findsOneWidget,
     );
-    await tester.tap(find.byTooltip('Скрыть фильтры'));
+    await tester.tap(find.text('Показать операции'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Покупка'));
     await tester.pumpAndSettle();

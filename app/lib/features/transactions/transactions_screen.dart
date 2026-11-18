@@ -20,7 +20,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   final _search = TextEditingController();
   String _type = '', _account = '', _category = '', _currency = '';
   DateTimeRange? _dates;
-  bool _showFilters = false;
   final Set<String> _busy = {};
   late final AuthNavigation _navigation;
   String? _userId;
@@ -133,17 +132,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     String label,
     String value,
     Map<String, String> choices,
-    ValueChanged<String> onChanged,
-  ) {
+    ValueChanged<String> onChanged, {
+    double width = 200,
+    VoidCallback? refreshSheet,
+  }) {
     final selected = choices.containsKey(value) ? value : '';
     final scheme = Theme.of(context).colorScheme;
     final options = <String, String>{'': 'Все', ...choices};
     final active = selected.isNotEmpty;
     final border = BorderRadius.circular(14);
     return SizedBox(
-      width: MediaQuery.sizeOf(context).width < 560
-          ? (MediaQuery.sizeOf(context).width - 52) / 2
-          : 200,
+      width: width,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -177,7 +176,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 maxHeight: 320,
               ),
               borderRadius: border,
-              onSelected: (v) => setState(() => onChanged(v)),
+              onSelected: (v) {
+                setState(() => onChanged(v));
+                refreshSheet?.call();
+              },
               itemBuilder: (context) => [
                 for (final entry in options.entries)
                   PopupMenuItem<String>(
@@ -423,18 +425,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           isLabelVisible: activeCount > 0,
                           label: Text('$activeCount'),
                           child: IconButton.outlined(
-                            tooltip: _showFilters
-                                ? 'Скрыть фильтры'
-                                : 'Показать фильтры',
+                            tooltip: 'Показать фильтры',
                             onPressed: () =>
-                                setState(() => _showFilters = !_showFilters),
+                                _openFilters(accounts, categories, currencies),
                             icon: const Icon(Icons.tune_rounded),
                           ),
                         ),
                       ],
                     ],
                   ),
-                  if (!mobile || _showFilters) ...[
+                  if (!mobile) ...[
                     const SizedBox(height: 20),
                     Wrap(
                       spacing: 12,
@@ -539,6 +539,186 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _openFilters(
+    Map<String, String> accounts,
+    Map<String, String> categories,
+    Map<String, String> currencies,
+  ) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          void refresh() {
+            if (sheetContext.mounted) setSheetState(() {});
+          }
+
+          final scheme = Theme.of(sheetContext).colorScheme;
+          final hasFilters =
+              _type.isNotEmpty ||
+              _account.isNotEmpty ||
+              _category.isNotEmpty ||
+              _currency.isNotEmpty ||
+              _dates != null ||
+              _search.text.trim().isNotEmpty;
+          return SafeArea(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * .85,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = (constraints.maxWidth - 12) / 2;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Фильтры',
+                                style: Theme.of(
+                                  sheetContext,
+                                ).textTheme.titleLarge,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Закрыть',
+                              onPressed: () => Navigator.pop(sheetContext),
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 16,
+                          children: [
+                            _filter(
+                              'Тип',
+                              _type,
+                              {
+                                'income': 'Доход',
+                                'expense': 'Расход',
+                                'transfer': 'Перевод',
+                              },
+                              (v) => _type = v,
+                              width: width,
+                              refreshSheet: refresh,
+                            ),
+                            _filter(
+                              'Счёт',
+                              _account,
+                              accounts,
+                              (v) => _account = v,
+                              width: width,
+                              refreshSheet: refresh,
+                            ),
+                            _filter(
+                              'Категория',
+                              _category,
+                              categories,
+                              (v) => _category = v,
+                              width: width,
+                              refreshSheet: refresh,
+                            ),
+                            _filter(
+                              'Валюта',
+                              _currency,
+                              currencies,
+                              (v) => _currency = v,
+                              width: width,
+                              refreshSheet: refresh,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Период',
+                          style: Theme.of(sheetContext).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          style: _dates == null
+                              ? null
+                              : OutlinedButton.styleFrom(
+                                  backgroundColor: scheme.primaryContainer,
+                                  foregroundColor: scheme.onPrimaryContainer,
+                                  side: BorderSide(
+                                    color: scheme.primaryContainer,
+                                  ),
+                                ),
+                          onPressed: () async {
+                            await _selectDates();
+                            refresh();
+                          },
+                          icon: const Icon(Icons.date_range),
+                          label: Text(
+                            _dates == null
+                                ? 'Выбрать период'
+                                : '${_day(_dates!.start)} — ${_day(_dates!.end)}',
+                          ),
+                        ),
+                        if (_dates != null)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                setState(() => _dates = null);
+                                refresh();
+                              },
+                              child: const Text('Сбросить период'),
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          child: const Text('Показать операции'),
+                        ),
+                        const SizedBox(height: 4),
+                        TextButton(
+                          style: hasFilters
+                              ? TextButton.styleFrom(
+                                  backgroundColor: scheme.primaryContainer,
+                                  foregroundColor: scheme.onPrimaryContainer,
+                                )
+                              : null,
+                          onPressed: hasFilters
+                              ? () {
+                                  setState(() {
+                                    _type = '';
+                                    _account = '';
+                                    _category = '';
+                                    _currency = '';
+                                    _dates = null;
+                                    _search.clear();
+                                  });
+                                  refresh();
+                                }
+                              : null,
+                          child: const Text('Сбросить фильтры'),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
