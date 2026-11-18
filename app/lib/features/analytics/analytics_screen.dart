@@ -265,9 +265,22 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           SizedBox(
             height: 200,
             child: Center(
-              child: CustomPaint(
-                size: const Size(180, 180),
-                painter: _DonutPainter(usedForChart),
+              child: SizedBox(
+                width: 180,
+                height: 180,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: const Size(180, 180),
+                      painter: _DonutPainter(usedForChart),
+                    ),
+                    Text(
+                      _months[_month.month - 1],
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -358,10 +371,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       child: Text(row.name, style: theme.textTheme.titleMedium),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      '${ExchangeRates.display(row.spent)} $currency',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: exceeded ? theme.colorScheme.error : null,
+                    Flexible(
+                      child: Text(
+                        '${ExchangeRates.display(row.spent)} $currency',
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: exceeded ? theme.colorScheme.error : null,
+                        ),
                       ),
                     ),
                   ],
