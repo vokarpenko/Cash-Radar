@@ -137,6 +137,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final selected = choices.containsKey(value) ? value : '';
     final scheme = Theme.of(context).colorScheme;
     final options = <String, String>{'': 'Все', ...choices};
+    final active = selected.isNotEmpty;
     final border = BorderRadius.circular(14);
     return SizedBox(
       width: 200,
@@ -148,10 +149,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             child: Text(label, style: Theme.of(context).textTheme.bodySmall),
           ),
           Material(
-            color: scheme.surface,
+            color: active ? scheme.primaryContainer : scheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: border,
-              side: BorderSide(color: scheme.outlineVariant),
+              side: BorderSide(
+                color: active ? scheme.primaryContainer : scheme.outlineVariant,
+              ),
             ),
             clipBehavior: Clip.antiAlias,
             child: PopupMenuButton<String>(
@@ -206,12 +209,23 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         Expanded(
                           child: Text(
                             options[selected]!,
+                            style: TextStyle(
+                              color: active
+                                  ? scheme.onPrimaryContainer
+                                  : scheme.onSurface,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: active
+                              ? scheme.onPrimaryContainer
+                              : scheme.onSurface,
+                        ),
                       ],
                     ),
                   ),
@@ -336,6 +350,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   ? _currency
                   : '';
               final query = _search.text.trim().toLowerCase();
+              final hasFilters =
+                  _type.isNotEmpty ||
+                  _account.isNotEmpty ||
+                  _category.isNotEmpty ||
+                  _currency.isNotEmpty ||
+                  _dates != null ||
+                  query.isNotEmpty;
               final filtered = items
                   .where(
                     (t) =>
@@ -395,6 +416,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         (v) => _currency = v,
                       ),
                       TextButton.icon(
+                        style: _dates == null
+                            ? null
+                            : TextButton.styleFrom(
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
+                              ),
                         onPressed: _selectDates,
                         icon: const Icon(Icons.date_range),
                         label: Text(
@@ -409,6 +440,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           child: const Text('Сбросить период'),
                         ),
                       TextButton(
+                        style: !hasFilters
+                            ? null
+                            : TextButton.styleFrom(
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
+                              ),
                         onPressed: () => setState(() {
                           _type = '';
                           _account = '';
