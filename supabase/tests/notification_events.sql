@@ -23,7 +23,8 @@ do $$ declare p jsonb:=jsonb_build_object('event_key',repeat('a',64),'source','a
  if not (public.ingest_notification_event(current_setting('test.notification.token'),p)->>'duplicate')::boolean then raise exception 'Duplicate was not detected'; end if;
  if not (public.ingest_notification_event(current_setting('test.notification.second_token'),p)->>'duplicate')::boolean then raise exception 'Retry after device replacement duplicated data'; end if;
  perform public.ingest_notification_event(current_setting('test.notification.token'),jsonb_set(p,'{event_key}',to_jsonb(repeat('b',64))));
- if (select count(*) from public.notification_events where user_id='84000000-0000-4000-8000-000000000001')<>2 then raise exception 'Different transactions collapsed'; end if;
+ perform public.ingest_notification_event(current_setting('test.notification.token'),p || jsonb_build_object('event_key',repeat('c',64),'source','ameria'));
+ if (select count(*) from public.notification_events where user_id='84000000-0000-4000-8000-000000000001')<>3 then raise exception 'Different transactions collapsed'; end if;
  begin perform public.ingest_notification_event(current_setting('test.notification.token'),p || '{"raw_text":"secret"}'::jsonb); raise exception 'Raw text accepted'; exception when invalid_parameter_value then null; end;
  begin perform public.ingest_notification_event(current_setting('test.notification.token'),jsonb_set(p,'{merchant}',to_jsonb('OTP 123456'::text))); raise exception 'OTP accepted'; exception when invalid_parameter_value then null; end;
  begin perform public.ingest_notification_event(current_setting('test.notification.token'),jsonb_set(p,'{merchant}',to_jsonb('CODE 123456'::text))); raise exception 'Code accepted'; exception when invalid_parameter_value then null; end;
@@ -44,7 +45,7 @@ reset role;
 select set_config('request.jwt.claims','{"sub":"84000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
 do $$ begin
- if (select count(*) from public.notification_events)<>2 then raise exception 'Owner cannot view events'; end if;
+ if (select count(*) from public.notification_events)<>3 then raise exception 'Owner cannot view events'; end if;
  if public.revoke_all_notification_devices()<>2 then raise exception 'Devices not revoked'; end if;
 end $$;
 reset role;

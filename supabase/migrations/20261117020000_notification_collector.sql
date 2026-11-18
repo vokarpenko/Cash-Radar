@@ -97,7 +97,7 @@ begin
  if v_time_source is null or v_time_source not in ('bank','notification') or (v_source='wallet' and v_time_source<>'notification') or (v_source in ('ameria','acba') and v_time_source<>'bank') or v_key is null or v_key !~ '^[0-9a-f]{64}$' or v_card is null or v_card !~ '^[0-9]{4}$'
  or v_currency is null or v_currency not in ('AMD','RUB','USD','EUR')
  or v_merchant is null or length(v_merchant) not between 2 and 120 or v_merchant ~ '[[:cntrl:]]' or length(regexp_replace(v_merchant,'[^0-9]','','g'))>=8 or v_merchant ~* '(https?://|www\.|@|(^|[^[:alpha:]])otp([^[:alpha:]]|$)|one.time|pass(word|code)|verification|(^|[^[:alpha:]])code([^[:alpha:]]|$)|парол|(^|[^[:alpha:]])код([^[:alpha:]]|$))'
- or v_source is null or v_kind is null or not ((v_source='wallet' and v_kind='purchase') or (v_source='ameria' and v_kind in ('purchase','credit')) or (v_source='acba' and v_kind in ('pre_purchase','pre_purchase_completion')))
+ or v_source is null or v_kind is null or not ((v_source='wallet' and v_kind='purchase') or (v_source='ameria' and v_kind in ('purchase','credit','pre_purchase')) or (v_source='acba' and v_kind in ('pre_purchase','pre_purchase_completion')))
  or coalesce(p_event->>'amount','') !~ '^[0-9]{1,16}(\.[0-9]{1,2})?$' then
   raise exception 'Invalid notification' using errcode='22023';
  end if;

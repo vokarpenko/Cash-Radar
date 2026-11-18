@@ -17,7 +17,7 @@ object NotificationParser {
     private val maskedCard = "[0-9]{4}\\*{3}([0-9]{4}),?"
     private val bankDate = "([0-9]{2}\\.[0-9]{2}\\.[0-9]{4} [0-9]{2}:[0-9]{2})"
     private val wallet = Regex("(?i)^$currency\\s+$money\\s+with\\s+.{1,120}?(?:mastercard|visa)\\b.{0,100}?[•·*]{1,4}\\s*([0-9]{4})$")
-    private val ameria = Regex("(?i)^(PURCHASE|CREDIT ACCOUNT)\\s*\\|\\s*$money\\s+$currency\\s*\\|\\s*$maskedCard\\s*\\|\\s*(.{2,120}?)\\s*\\|\\s*$bankDate(?:\\s*\\|\\s*BALANCE:.*)?$")
+    private val ameria = Regex("(?i)^(PRE-PURCHASE|PURCHASE|CREDIT ACCOUNT)\\s*\\|\\s*$money\\s+$currency\\s*\\|\\s*$maskedCard\\s*\\|\\s*(.{2,120}?)\\s*\\|\\s*$bankDate(?:\\s*\\|\\s*BALANCE:.*)?$")
     private val acba = Regex("(?i)^(PRE-PURCHASE COMPLETION|PRE-PURCHASE)\\s+$money\\s+$currency\\s+$maskedCard\\s+(.{2,120}?)\\s+$bankDate$")
     data class Event(val source:String, val kind:String, val amount:String, val currency:String, val merchant:String, val cardLast4:String, val occurredAtMillis:Long, val timeSource:String)
     private fun amount(value:String):String? {
@@ -50,7 +50,8 @@ object NotificationParser {
             AMERIA -> {
                 if(!t.equals("АРКА транзакции",true) && !t.equals("ARKA transactions",true)) return null
                 val m=ameria.matchEntire(text) ?: return null
-                Event("ameria",if(m.groupValues[1].equals("PURCHASE",true)) "purchase" else "credit",amount(m.groupValues[2]) ?: return null,m.groupValues[3].uppercase(Locale.ROOT),merchant(m.groupValues[5]) ?: return null,m.groupValues[4],date(m.groupValues[6]) ?: return null,"bank")
+                val kind = when(m.groupValues[1].uppercase(Locale.ROOT)) { "PURCHASE" -> "purchase"; "PRE-PURCHASE" -> "pre_purchase"; else -> "credit" }
+                Event("ameria",kind,amount(m.groupValues[2]) ?: return null,m.groupValues[3].uppercase(Locale.ROOT),merchant(m.groupValues[5]) ?: return null,m.groupValues[4],date(m.groupValues[6]) ?: return null,"bank")
             }
             ACBA -> {
                 if(!t.equals("ACBA BANK",true)) return null
