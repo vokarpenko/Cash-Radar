@@ -129,6 +129,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Зарплата'), findsOneWidget);
       expect(find.text('Еда'), findsNothing);
+      await tester.tap(find.byType(DropdownButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('RUB').last);
+      await tester.pumpAndSettle();
+      expect(currency.currency, 'RUB');
+      expect(find.text('500.00 RUB'), findsWidgets);
       expect(tester.takeException(), isNull);
     },
   );
