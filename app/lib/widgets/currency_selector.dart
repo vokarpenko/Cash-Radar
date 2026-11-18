@@ -40,7 +40,12 @@ class _CurrencySelectorState extends State<CurrencySelector> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: Theme(
-        data: theme.copyWith(hoverColor: Colors.transparent),
+        data: theme.copyWith(
+          hoverColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashFactory: NoSplash.splashFactory,
+        ),
         child: PopupMenuButton<String>(
           tooltip: '',
           borderRadius: BorderRadius.circular(12),
