@@ -141,6 +141,30 @@ void main() {
     await tester.tap(find.text('Операции'));
     await tester.pumpAndSettle();
     expect(find.text('История операций'), findsOneWidget);
+    await tester.tap(find.text('Ещё'));
+    await tester.pumpAndSettle();
+    expect(find.text('Импорт'), findsOneWidget);
+    await tester.tap(find.text('Настройки'));
+    await tester.pumpAndSettle();
+    expect(find.text('Управление приложением и доступом'), findsOneWidget);
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      4,
+    );
+    await tester.tap(find.text('Ещё'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Импорт'));
+    await tester.pumpAndSettle();
+    expect(
+      GoRouter.of(
+        tester.element(find.byType(AppShell)),
+      ).routeInformationProvider.value.uri.path,
+      '/imports',
+    );
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      4,
+    );
   });
 
   testWidgets('accounts show loading, error, retry and real values', (

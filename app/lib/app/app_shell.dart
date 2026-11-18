@@ -64,6 +64,48 @@ class AppShell extends ConsumerWidget {
     );
     final auth = ref.watch(authNavigationProvider);
     void navigate(int value) => context.go(_destinations[value].path);
+    const mobileIndexes = [0, 2, 3, 1];
+    final mobileSelected = mobileIndexes.indexOf(selected);
+
+    Future<void> openMore() async {
+      final destination = await showModalBottomSheet<int>(
+        context: context,
+        showDragHandle: true,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetContext) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: Text(
+                    'Ещё',
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
+                ),
+                for (final i in [4, 5])
+                  ListTile(
+                    leading: Icon(_destinations[i].icon),
+                    title: Text(_destinations[i].label),
+                    trailing: i == selected
+                        ? const Icon(Icons.check_rounded)
+                        : const Icon(Icons.chevron_right),
+                    selected: i == selected,
+                    onTap: () => Navigator.of(sheetContext).pop(i),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (destination != null && context.mounted) navigate(destination);
+    }
 
     final content = SafeArea(
       child: Center(
@@ -133,15 +175,26 @@ class AppShell extends ConsumerWidget {
       bottomNavigationBar: wide
           ? null
           : NavigationBar(
-              selectedIndex: selected,
-              onDestinationSelected: navigate,
+              selectedIndex: mobileSelected < 0 ? 4 : mobileSelected,
+              onDestinationSelected: (index) {
+                if (index == 4) {
+                  openMore();
+                } else {
+                  navigate(mobileIndexes[index]);
+                }
+              },
               destinations: [
-                for (final item in _destinations)
+                for (final index in mobileIndexes)
                   NavigationDestination(
-                    icon: Icon(item.icon),
-                    selectedIcon: Icon(item.selected),
-                    label: item.label,
+                    icon: Icon(_destinations[index].icon),
+                    selectedIcon: Icon(_destinations[index].selected),
+                    label: _destinations[index].label,
                   ),
+                const NavigationDestination(
+                  icon: Icon(Icons.more_horiz),
+                  selectedIcon: Icon(Icons.more_horiz),
+                  label: 'Ещё',
+                ),
               ],
             ),
     );
