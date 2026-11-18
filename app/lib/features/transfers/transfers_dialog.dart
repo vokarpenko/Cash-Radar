@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -91,7 +92,7 @@ class _TransfersDialogState extends ConsumerState<TransfersDialog> {
       '${r['debit_account']}: ${Money.formatStored(r['debit_amount'] as String)} ${r['debit_currency']} → ${r['credit_account']}: ${Money.formatStored(r['credit_amount'] as String)} ${r['credit_currency']}';
   Future<void> _openForm(Widget child) async {
     if (_busy || _nav.userId != _owner) return;
-    await showDialog<void>(context: context, builder: (_) => child);
+    await showAdaptiveAction<void>(context: context, builder: (_) => child);
     if (!mounted || _nav.userId != _owner) return;
     ref.invalidate(transferCandidatesProvider);
     ref.invalidate(transferGroupsProvider);

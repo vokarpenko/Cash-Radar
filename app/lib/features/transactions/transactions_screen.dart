@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,7 +54,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   Future<void> _edit([TransactionEntry? item]) async {
-    await showDialog<bool>(
+    await showAdaptiveAction<bool>(
       context: context,
       builder: (_) => TransactionForm(transaction: item),
     );
@@ -109,7 +110,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   void _openNotifications() {
     final owner = _userId;
     if (owner == null) return;
-    showDialog<void>(
+    showAdaptiveAction<void>(
       context: context,
       builder: (_) => PendingNotificationsDialog(owner: owner),
     );
@@ -291,7 +292,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             if (MediaQuery.sizeOf(context).width < 500)
               IconButton(
                 tooltip: 'Переводы',
-                onPressed: () => showDialog<void>(
+                onPressed: () => showAdaptiveAction<void>(
                   context: context,
                   builder: (_) => const TransfersDialog(),
                 ),
@@ -299,7 +300,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               )
             else
               TextButton(
-                onPressed: () => showDialog<void>(
+                onPressed: () => showAdaptiveAction<void>(
                   context: context,
                   builder: (_) => const TransfersDialog(),
                 ),

@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import '../../widgets/currency_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -210,7 +211,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                 subtitle: const Text(
                   'Названия, алиасы, MCC и запомненные исправления',
                 ),
-                onTap: () => showDialog<void>(
+                onTap: () => showAdaptiveAction<void>(
                   context: context,
                   builder: (_) => const RulesDialog(),
                 ),

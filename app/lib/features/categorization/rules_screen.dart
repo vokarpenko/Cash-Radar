@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/auth_navigation.dart';
@@ -58,7 +59,7 @@ class _RulesDialogState extends ConsumerState<RulesDialog> {
   }
 
   Future<void> _add(bool alias, List<TransactionCategory> categories) async {
-    final input = await showDialog<_RuleInput>(
+    final input = await showAdaptiveAction<_RuleInput>(
       context: context,
       builder: (_) => _RuleEditor(alias: alias, categories: categories),
     );

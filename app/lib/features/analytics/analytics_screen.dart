@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -96,7 +97,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   Future<void> _budget(String currency, [AnalyticsRow? row]) async {
     final owner = _owner;
     if (owner == null) return;
-    final changed = await showDialog<bool>(
+    final changed = await showAdaptiveAction<bool>(
       context: context,
       builder: (_) => BudgetDialog(
         owner: owner,
