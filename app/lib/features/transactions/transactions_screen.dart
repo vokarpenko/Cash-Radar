@@ -20,6 +20,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   final _search = TextEditingController();
   String _type = '', _account = '', _category = '', _currency = '';
   DateTimeRange? _dates;
+  bool _showFilters = false;
   final Set<String> _busy = {};
   late final AuthNavigation _navigation;
   String? _userId;
@@ -140,7 +141,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final active = selected.isNotEmpty;
     final border = BorderRadius.circular(14);
     return SizedBox(
-      width: 200,
+      width: MediaQuery.sizeOf(context).width < 560
+          ? (MediaQuery.sizeOf(context).width - 52) / 2
+          : 200,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -302,6 +305,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ),
             if (MediaQuery.sizeOf(context).width < 500)
               IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  foregroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onPrimaryContainer,
+                ),
                 tooltip: 'Добавить операцию',
                 onPressed: () => _edit(),
                 icon: const Icon(Icons.add),
@@ -380,88 +391,126 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                 .contains(query)),
                   )
                   .toList();
+              final mobile = MediaQuery.sizeOf(context).width < 560;
+              final activeCount = [
+                _type.isNotEmpty,
+                _account.isNotEmpty,
+                _category.isNotEmpty,
+                _currency.isNotEmpty,
+                _dates != null,
+              ].where((active) => active).length;
               return ListView(
                 children: [
-                  TextField(
-                    controller: _search,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      hintText: 'Поиск по операциям, счетам и категориям',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 16,
+                  Row(
                     children: [
-                      _filter('Тип', _type, {
-                        'income': 'Доход',
-                        'expense': 'Расход',
-                        'transfer': 'Перевод',
-                      }, (v) => _type = v),
-                      _filter('Счёт', _account, accounts, (v) => _account = v),
-                      _filter(
-                        'Категория',
-                        _category,
-                        categories,
-                        (v) => _category = v,
-                      ),
-                      _filter(
-                        'Валюта',
-                        _currency,
-                        currencies,
-                        (v) => _currency = v,
-                      ),
-                      TextButton.icon(
-                        style: _dates == null
-                            ? null
-                            : TextButton.styleFrom(
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.primaryContainer,
-                                foregroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer,
-                              ),
-                        onPressed: _selectDates,
-                        icon: const Icon(Icons.date_range),
-                        label: Text(
-                          _dates == null
-                              ? 'Период'
-                              : '${_day(_dates!.start)} — ${_day(_dates!.end)}',
+                      Expanded(
+                        child: TextField(
+                          controller: _search,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: mobile
+                                ? 'Поиск операций'
+                                : 'Поиск по операциям, счетам и категориям',
+                            prefixIcon: const Icon(Icons.search),
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surface,
+                          ),
                         ),
                       ),
-                      if (_dates != null)
-                        TextButton(
-                          onPressed: () => setState(() => _dates = null),
-                          child: const Text('Сбросить период'),
+                      if (mobile) ...[
+                        const SizedBox(width: 10),
+                        Badge(
+                          isLabelVisible: activeCount > 0,
+                          label: Text('$activeCount'),
+                          child: IconButton.outlined(
+                            tooltip: _showFilters
+                                ? 'Скрыть фильтры'
+                                : 'Показать фильтры',
+                            onPressed: () =>
+                                setState(() => _showFilters = !_showFilters),
+                            icon: const Icon(Icons.tune_rounded),
+                          ),
                         ),
-                      TextButton(
-                        style: !hasFilters
-                            ? null
-                            : TextButton.styleFrom(
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.primaryContainer,
-                                foregroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer,
-                              ),
-                        onPressed: () => setState(() {
-                          _type = '';
-                          _account = '';
-                          _category = '';
-                          _currency = '';
-                          _dates = null;
-                          _search.clear();
-                        }),
-                        child: const Text('Сбросить фильтры'),
-                      ),
+                      ],
                     ],
                   ),
+                  if (!mobile || _showFilters) ...[
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 16,
+                      children: [
+                        _filter('Тип', _type, {
+                          'income': 'Доход',
+                          'expense': 'Расход',
+                          'transfer': 'Перевод',
+                        }, (v) => _type = v),
+                        _filter(
+                          'Счёт',
+                          _account,
+                          accounts,
+                          (v) => _account = v,
+                        ),
+                        _filter(
+                          'Категория',
+                          _category,
+                          categories,
+                          (v) => _category = v,
+                        ),
+                        _filter(
+                          'Валюта',
+                          _currency,
+                          currencies,
+                          (v) => _currency = v,
+                        ),
+                        TextButton.icon(
+                          style: _dates == null
+                              ? null
+                              : TextButton.styleFrom(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                ),
+                          onPressed: _selectDates,
+                          icon: const Icon(Icons.date_range),
+                          label: Text(
+                            _dates == null
+                                ? 'Период'
+                                : '${_day(_dates!.start)} — ${_day(_dates!.end)}',
+                          ),
+                        ),
+                        if (_dates != null)
+                          TextButton(
+                            onPressed: () => setState(() => _dates = null),
+                            child: const Text('Сбросить период'),
+                          ),
+                        TextButton(
+                          style: !hasFilters
+                              ? null
+                              : TextButton.styleFrom(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                ),
+                          onPressed: () => setState(() {
+                            _type = '';
+                            _account = '';
+                            _category = '';
+                            _currency = '';
+                            _dates = null;
+                            _search.clear();
+                          }),
+                          child: const Text('Сбросить фильтры'),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   if (filtered.isNotEmpty) ...[
                     Text(
@@ -493,7 +542,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  Widget _card(TransactionEntry item) {
+  Widget _card(
+    TransactionEntry item, {
+    bool details = false,
+    VoidCallback? closeDetails,
+  }) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final amount = Money.formatStored(item.amount);
@@ -511,6 +564,71 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         : item.type == 'income'
         ? 'Доход'
         : 'Расход';
+    if (!details && MediaQuery.sizeOf(context).width < 560) {
+      return Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: InkWell(
+          onTap: () => _showDetails(item),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    transfer
+                        ? Icons.swap_horiz_rounded
+                        : item.type == 'income'
+                        ? Icons.south_west_rounded
+                        : Icons.north_east_rounded,
+                    size: 20,
+                    color: scheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${item.date} · ${item.accountName}${item.accountActive ? '' : ' · архив'} · ${item.categoryName}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$sign$amount ${item.currency}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final amountWidget = Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -614,12 +732,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   spacing: 8,
                   children: [
                     TextButton.icon(
-                      onPressed: canEdit ? () => _edit(item) : null,
+                      onPressed: canEdit
+                          ? () {
+                              closeDetails?.call();
+                              _edit(item);
+                            }
+                          : null,
                       icon: const Icon(Icons.edit_outlined, size: 18),
                       label: const Text('Изменить'),
                     ),
                     TextButton.icon(
-                      onPressed: canEdit ? () => _delete(item) : null,
+                      onPressed: canEdit
+                          ? () {
+                              closeDetails?.call();
+                              _delete(item);
+                            }
+                          : null,
                       icon: const Icon(Icons.delete_outline, size: 18),
                       label: const Text('Удалить'),
                     ),
@@ -628,6 +756,43 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  void _showDetails(TransactionEntry item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * .85,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                  child: Text(
+                    'Детали операции',
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
+                ),
+                _card(
+                  item,
+                  details: true,
+                  closeDetails: () => Navigator.of(sheetContext).pop(),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
