@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/accounts/accounts_repository.dart';
 import '../features/auth/auth_service.dart';
 import '../features/imports/import_repository.dart';
+import '../features/notifications/notification_bridge.dart';
 import '../features/settings/currency_repository.dart';
 import '../features/transactions/transactions_repository.dart';
 import '../features/transfers/transfers_repository.dart';
@@ -28,6 +29,7 @@ class AuthNavigation extends ChangeNotifier {
   }) : hasSession = auth.hasSession,
        userId = auth.userId,
        recovery = initialRecovery && auth.hasSession {
+    unawaited(NotificationBridge.syncOwner(userId).catchError((_) {}));
     _subscription = auth.changes.listen(
       _onChange,
       onError: (Object error, StackTrace stack) {
@@ -50,6 +52,7 @@ class AuthNavigation extends ChangeNotifier {
     final nextId = valid ? state.session!.user.id : null;
     if (userId != nextId) {
       userId = nextId;
+      unawaited(NotificationBridge.syncOwner(nextId).catchError((_) {}));
       onIdentityChanged();
     }
     hasSession = valid;
@@ -80,6 +83,7 @@ final authNavigationProvider = Provider<AuthNavigation>(
         ref.invalidate(accountsProvider);
         ref.invalidate(baseCurrencyProvider);
         ref.invalidate(transactionsProvider);
+        ref.invalidate(pendingNotificationsProvider);
         ref.invalidate(transactionCategoriesProvider);
         ref.invalidate(importBatchesProvider);
         ref.invalidate(importDetailProvider);
@@ -96,6 +100,7 @@ final authNavigationProvider = Provider<AuthNavigation>(
     accountsProvider,
     baseCurrencyProvider,
     transactionsProvider,
+    pendingNotificationsProvider,
     transactionCategoriesProvider,
     importBatchesProvider,
     importDetailProvider,

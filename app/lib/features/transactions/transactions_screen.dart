@@ -6,6 +6,7 @@ import '../../shared/section_state.dart';
 import '../accounts/accounts_repository.dart';
 import '../accounts/money.dart';
 import 'transaction_form.dart';
+import 'pending_notifications_dialog.dart';
 import '../transfers/transfers_dialog.dart';
 import 'transactions_repository.dart';
 
@@ -105,6 +106,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
   }
 
+  void _openNotifications() {
+    final owner = _userId;
+    if (owner == null) return;
+    showDialog<void>(
+      context: context,
+      builder: (_) => PendingNotificationsDialog(owner: owner),
+    );
+  }
+
   Future<void> _selectDates() async {
     final result = await showDateRangePicker(
       context: context,
@@ -148,6 +158,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     final transactions = ref.watch(transactionsProvider);
+    final pending = ref.watch(pendingNotificationsProvider(_userId ?? ''));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -169,6 +180,25 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ],
+            ),
+            pending.maybeWhen(
+              data: (items) => items.isEmpty
+                  ? const SizedBox.shrink()
+                  : MediaQuery.sizeOf(context).width < 500
+                  ? IconButton(
+                      tooltip: 'Предварительные уведомления (${items.length})',
+                      onPressed: _openNotifications,
+                      icon: Badge(
+                        label: Text('${items.length}'),
+                        child: const Icon(Icons.notifications_none_outlined),
+                      ),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: _openNotifications,
+                      icon: const Icon(Icons.notifications_none_outlined),
+                      label: Text('Уведомления (${items.length})'),
+                    ),
+              orElse: () => const SizedBox.shrink(),
             ),
             if (MediaQuery.sizeOf(context).width < 500)
               IconButton(

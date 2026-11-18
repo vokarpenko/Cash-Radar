@@ -112,8 +112,45 @@ class TransactionInput {
   };
 }
 
+class PendingNotification {
+  const PendingNotification({
+    required this.id,
+    required this.source,
+    required this.kind,
+    required this.amount,
+    required this.currency,
+    required this.merchant,
+    required this.cardLast4,
+    required this.occurredAt,
+    required this.timeSource,
+  });
+  final String id,
+      source,
+      kind,
+      amount,
+      currency,
+      merchant,
+      cardLast4,
+      occurredAt,
+      timeSource;
+  factory PendingNotification.fromJson(Map<String, dynamic> row) =>
+      PendingNotification(
+        id: row['id'] as String,
+        source: row['source'] as String,
+        kind: row['kind'] as String,
+        amount: row['amount'] as String,
+        currency: row['currency'] as String,
+        merchant: row['merchant'] as String,
+        cardLast4: row['card_last4'] as String,
+        occurredAt: row['occurred_at'] as String,
+        timeSource: row['time_source'] as String,
+      );
+}
+
 abstract interface class TransactionsRepository {
   Future<List<TransactionEntry>> loadTransactions();
+  Future<List<PendingNotification>> loadPendingNotifications(String userId);
+  Future<void> dismissNotification(String id);
   Future<List<TransactionCategory>> loadCategories();
   Future<void> createTransaction(TransactionInput input);
   Future<void> updateTransaction(String id, TransactionInput input);
@@ -123,6 +160,28 @@ abstract interface class TransactionsRepository {
 class SupabaseTransactionsRepository implements TransactionsRepository {
   SupabaseTransactionsRepository(this.client);
   final SupabaseClient client;
+
+  @override
+  Future<List<PendingNotification>> loadPendingNotifications(
+    String userId,
+  ) async {
+    if (userId.isEmpty) return [];
+    final rows = await client
+        .from('notification_event_details')
+        .select(
+          'id,source,kind,amount,currency,merchant,card_last4,occurred_at,time_source',
+        )
+        .eq('user_id', userId)
+        .isFilter('dismissed_at', null)
+        .order('created_at', ascending: false)
+        .limit(100);
+    return rows.map(PendingNotification.fromJson).toList(growable: false);
+  }
+
+  @override
+  Future<void> dismissNotification(String id) async {
+    await client.rpc('dismiss_notification_event', params: {'p_id': id});
+  }
 
   @override
   Future<List<TransactionEntry>> loadTransactions() async {
@@ -192,6 +251,15 @@ final transactionsProvider = FutureProvider.autoDispose<List<TransactionEntry>>(
 final transactionCategoriesProvider =
     FutureProvider.autoDispose<List<TransactionCategory>>(
       (ref) => ref.watch(transactionsRepositoryProvider).loadCategories(),
+      dependencies: [transactionsRepositoryProvider],
+      retry: (_, _) => null,
+    );
+
+final pendingNotificationsProvider = FutureProvider.autoDispose
+    .family<List<PendingNotification>, String>(
+      (ref, userId) => ref
+          .watch(transactionsRepositoryProvider)
+          .loadPendingNotifications(userId),
       dependencies: [transactionsRepositoryProvider],
       retry: (_, _) => null,
     );
