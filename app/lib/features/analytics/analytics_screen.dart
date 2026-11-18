@@ -8,6 +8,7 @@ import '../settings/currency_repository.dart';
 import '../transactions/transactions_repository.dart';
 import 'analytics_repository.dart';
 import 'analytics_format.dart';
+import '../../app/theme_preference.dart';
 import 'period_analytics.dart';
 
 const _months = [
@@ -25,14 +26,14 @@ const _months = [
   'декабрь',
 ];
 const _colors = [
-  Color(0xff008b82),
-  Color(0xff6099db),
-  Color(0xffe39843),
-  Color(0xffa069ce),
-  Color(0xff83a94e),
-  Color(0xffd26b76),
-  Color(0xff5972b7),
-  Color(0xffc89b3f),
+  Color(0xffffd500),
+  Color(0xff242424),
+  Color(0xffffa940),
+  Color(0xff8d7bea),
+  Color(0xff80b89a),
+  Color(0xffef8585),
+  Color(0xff799bd0),
+  Color(0xffc5a45b),
 ];
 String _monthKey(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-01';
@@ -130,127 +131,220 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final theme = Theme.of(context),
         currencyValue = ref.watch(baseCurrencyProvider);
     final owner = _owner;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text('Аналитика', style: theme.textTheme.headlineMedium),
-            currencyValue.when(
-              data: (currency) => DropdownButton<String>(
-                value: supportedCurrencies.contains(currency) ? currency : null,
-                hint: const Text('Валюта'),
-                items: [
-                  for (final code in supportedCurrencies)
-                    DropdownMenuItem(value: code, child: Text(code)),
-                ],
-                onChanged: (v) {
-                  if (v != null && v != currency) _changeCurrency(v);
-                },
-              ),
-              error: (_, _) => TextButton(
-                onPressed: () => ref.invalidate(baseCurrencyProvider),
-                child: const Text('Повторить загрузку валюты'),
-              ),
-              loading: () => const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-            currencyValue.maybeWhen(
-              data: (currency) => MediaQuery.sizeOf(context).width < 560
-                  ? IconButton.filled(
-                      tooltip: 'Установить бюджет',
-                      onPressed: () => _budget(currency),
-                      icon: const Icon(Icons.add),
-                    )
-                  : FilledButton.icon(
-                      onPressed: () => _budget(currency),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Установить бюджет'),
-                    ),
-              orElse: () => const SizedBox.shrink(),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            IconButton(
-              tooltip: 'Предыдущий месяц',
-              onPressed: _month.year > 1900 || _month.month > 1
-                  ? () => setState(
-                      () => _month = DateTime(_month.year, _month.month - 1),
-                    )
-                  : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Text(
-              '${_months[_month.month - 1]} ${_month.year}',
-              style: theme.textTheme.titleMedium,
-            ),
-            IconButton(
-              tooltip: 'Следующий месяц',
-              onPressed: _month.year < 2100 || _month.month < 12
-                  ? () => setState(
-                      () => _month = DateTime(_month.year, _month.month + 1),
-                    )
-                  : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            const SizedBox(width: 8),
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: true, label: Text('Расходы')),
-                ButtonSegment(value: false, label: Text('Доходы')),
-              ],
-              selected: {_expense},
-              onSelectionChanged: (value) =>
-                  setState(() => _expense = value.first),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: currencyValue.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, _) =>
-                const Center(child: Text('Не удалось загрузить валюту.')),
-            data: (currency) {
-              if (owner == null) return const SizedBox.shrink();
-              final key = (owner, _monthKey(_month), currency);
-              return ref
-                  .watch(monthlyAnalyticsProvider(key))
-                  .when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (_, _) => Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Не удалось загрузить аналитику или курсы валют.',
-                          ),
-                          TextButton(
-                            onPressed: () =>
-                                ref.invalidate(monthlyAnalyticsProvider(key)),
-                            child: const Text('Повторить'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    data: (data) => _content(data, currency),
-                  );
-            },
+    final dark = ref.watch(appDarkModeProvider);
+    final foreground = dark ? const Color(0xfff5f5f1) : const Color(0xff20201e);
+    final scheme = theme.colorScheme.copyWith(
+      primary: dark ? const Color(0xffffd500) : const Color(0xff222222),
+      onPrimary: dark ? const Color(0xff191919) : Colors.white,
+      primaryContainer: const Color(0xffffd500),
+      onPrimaryContainer: const Color(0xff191919),
+      secondaryContainer: const Color(0xffffd500),
+      onSecondaryContainer: const Color(0xff191919),
+      surface: dark ? const Color(0xff252525) : Colors.white,
+      surfaceContainerLow: dark
+          ? const Color(0xff30302e)
+          : const Color(0xfff5f5f2),
+      outline: dark ? const Color(0xff777770) : const Color(0xffb8b8b0),
+      outlineVariant: dark ? const Color(0xff454540) : const Color(0xffe9e9e4),
+    );
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: scheme,
+        cardTheme: CardThemeData(
+          color: scheme.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
         ),
-      ],
+        textTheme: theme.textTheme
+            .apply(bodyColor: foreground, displayColor: foreground)
+            .copyWith(
+              titleLarge: theme.textTheme.titleLarge?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -.4,
+              ),
+              titleMedium: theme.textTheme.titleMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+              ),
+              headlineSmall: theme.textTheme.headlineSmall?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -.6,
+              ),
+              bodySmall: theme.textTheme.bodySmall?.copyWith(
+                color: dark ? const Color(0xffb8b8b0) : const Color(0xff777770),
+              ),
+            ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xffffd500),
+            foregroundColor: const Color(0xff191919),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: foreground,
+            side: BorderSide(color: scheme.outlineVariant),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        segmentedButtonTheme: SegmentedButtonThemeData(
+          style: ButtonStyle(
+            side: WidgetStatePropertyAll(
+              BorderSide(color: scheme.outlineVariant),
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ),
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: const Color(0xffffd500),
+          linearTrackColor: dark
+              ? const Color(0xff3a3a37)
+              : const Color(0xfff0f0eb),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Аналитика',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.2,
+                ),
+              ),
+              currencyValue.when(
+                data: (currency) => DropdownButton<String>(
+                  value: supportedCurrencies.contains(currency)
+                      ? currency
+                      : null,
+                  hint: const Text('Валюта'),
+                  items: [
+                    for (final code in supportedCurrencies)
+                      DropdownMenuItem(value: code, child: Text(code)),
+                  ],
+                  onChanged: (v) {
+                    if (v != null && v != currency) _changeCurrency(v);
+                  },
+                ),
+                error: (_, _) => TextButton(
+                  onPressed: () => ref.invalidate(baseCurrencyProvider),
+                  child: const Text('Повторить загрузку валюты'),
+                ),
+                loading: () => const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+              currencyValue.maybeWhen(
+                data: (currency) => MediaQuery.sizeOf(context).width < 560
+                    ? IconButton.filled(
+                        tooltip: 'Установить бюджет',
+                        onPressed: () => _budget(currency),
+                        icon: const Icon(Icons.add),
+                      )
+                    : FilledButton.icon(
+                        onPressed: () => _budget(currency),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Установить бюджет'),
+                      ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              IconButton(
+                tooltip: 'Предыдущий месяц',
+                onPressed: _month.year > 1900 || _month.month > 1
+                    ? () => setState(
+                        () => _month = DateTime(_month.year, _month.month - 1),
+                      )
+                    : null,
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Text(
+                '${_months[_month.month - 1]} ${_month.year}',
+                style: theme.textTheme.titleMedium,
+              ),
+              IconButton(
+                tooltip: 'Следующий месяц',
+                onPressed: _month.year < 2100 || _month.month < 12
+                    ? () => setState(
+                        () => _month = DateTime(_month.year, _month.month + 1),
+                      )
+                    : null,
+                icon: const Icon(Icons.chevron_right),
+              ),
+              const SizedBox(width: 8),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Расходы')),
+                  ButtonSegment(value: false, label: Text('Доходы')),
+                ],
+                selected: {_expense},
+                onSelectionChanged: (value) =>
+                    setState(() => _expense = value.first),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: currencyValue.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, _) =>
+                  const Center(child: Text('Не удалось загрузить валюту.')),
+              data: (currency) {
+                if (owner == null) return const SizedBox.shrink();
+                final key = (owner, _monthKey(_month), currency);
+                return ref
+                    .watch(monthlyAnalyticsProvider(key))
+                    .when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (_, _) => Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Не удалось загрузить аналитику или курсы валют.',
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  ref.invalidate(monthlyAnalyticsProvider(key)),
+                              child: const Text('Повторить'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      data: (data) => _content(data, currency),
+                    );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -270,7 +364,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final overview = Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -298,7 +392,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                           children: [
                             CustomPaint(
                               size: const Size(176, 176),
-                              painter: _DonutPainter(chartRows),
+                              painter: _DonutPainter(
+                                chartRows,
+                                theme.brightness == Brightness.dark,
+                              ),
                             ),
                             Text(
                               _months[_month.month - 1],
@@ -353,7 +450,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                         ),
                       ),
                     for (var i = 0; i < rows.length; i++)
-                      _category(rows[i], currency, _colors[i % _colors.length]),
+                      _category(
+                        rows[i],
+                        currency,
+                        _chartColor(i, theme.brightness == Brightness.dark),
+                      ),
                   ],
                 );
                 if (constraints.maxWidth >= 720) {
@@ -405,79 +506,96 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         : (row.spent.toDouble() / limit.toDouble()).clamp(0.0, 1.0);
     final exceeded = limit != null && row.spent > limit;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: .16),
-              borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .16),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(_categoryIcon(row), color: color),
             ),
-            child: Icon(_categoryIcon(row), color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(row.name, style: theme.textTheme.titleMedium),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        '${analyticsAmount(row.spent)} $currency',
-                        textAlign: TextAlign.end,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: exceeded ? theme.colorScheme.error : null,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          row.name,
+                          style: theme.textTheme.titleMedium,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${row.count} оп. ${limit == null ? '' : '· лимит ${analyticsAmount(limit)} $currency'}',
-                  style: theme.textTheme.bodySmall,
-                ),
-                if (limit != null) ...[
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: ratio,
-                    color: exceeded ? theme.colorScheme.error : color,
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          '${analyticsAmount(row.spent)} $currency',
+                          textAlign: TextAlign.end,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: exceeded ? theme.colorScheme.error : null,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    exceeded
-                        ? 'Превышение ${analyticsAmount(row.spent - limit)} $currency'
-                        : 'Осталось ${analyticsAmount(limit - row.spent)} $currency',
+                    '${row.count} оп. ${limit == null ? '' : '· лимит ${analyticsAmount(limit)} $currency'}',
                     style: theme.textTheme.bodySmall,
                   ),
+                  if (limit != null) ...[
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: ratio,
+                      color: exceeded ? theme.colorScheme.error : color,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      exceeded
+                          ? 'Превышение ${analyticsAmount(row.spent - limit)} $currency'
+                          : 'Осталось ${analyticsAmount(limit - row.spent)} $currency',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          if (_expense)
-            IconButton(
-              tooltip: limit == null ? 'Установить бюджет' : 'Изменить бюджет',
-              onPressed: () => _budget(currency, row),
-              icon: const Icon(Icons.edit_outlined),
-            ),
-        ],
+            if (_expense)
+              IconButton(
+                tooltip: limit == null
+                    ? 'Установить бюджет'
+                    : 'Изменить бюджет',
+                onPressed: () => _budget(currency, row),
+                icon: const Icon(Icons.edit_outlined),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
+Color _chartColor(int index, bool dark) => dark && index % _colors.length == 1
+    ? const Color(0xffe4e4dc)
+    : _colors[index % _colors.length];
+
 class _DonutPainter extends CustomPainter {
-  _DonutPainter(this.rows);
+  _DonutPainter(this.rows, this.dark);
   final List<AnalyticsRow> rows;
+  final bool dark;
   @override
   void paint(Canvas canvas, Size size) {
     final total = rows
@@ -494,7 +612,7 @@ class _DonutPainter extends CustomPainter {
         sweep,
         false,
         Paint()
-          ..color = _colors[i % _colors.length]
+          ..color = _chartColor(i, dark)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 24,
       );
@@ -504,7 +622,7 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) =>
-      oldDelegate.rows != rows;
+      oldDelegate.rows != rows || oldDelegate.dark != dark;
 }
 
 class BudgetDialog extends ConsumerStatefulWidget {

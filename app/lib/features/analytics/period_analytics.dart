@@ -169,6 +169,7 @@ class _PeriodAnalyticsState extends ConsumerState<PeriodAnalytics> {
             final cards = [
               _MetricCard(
                 icon: Icons.account_balance_wallet_outlined,
+                highlighted: true,
                 label: 'Текущий общий баланс',
                 value: _money(report.balance, currency),
                 detail: 'Только активные счета · на текущий момент',
@@ -451,7 +452,7 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
     margin: EdgeInsets.zero,
-    child: Padding(padding: const EdgeInsets.all(20), child: child),
+    child: Padding(padding: const EdgeInsets.all(24), child: child),
   );
 }
 
@@ -462,28 +463,69 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.detail,
     this.secondary,
+    this.highlighted = false,
   });
   final IconData icon;
   final String label, value, detail;
   final String? secondary;
+  final bool highlighted;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return _Panel(
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? const Color(0xffffd500)
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Expanded(child: Text(label, style: theme.textTheme.titleSmall)),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: highlighted
+                      ? const Color(0xff1f1f1d)
+                      : const Color(0xfffff4b8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: highlighted ? Colors.white : const Color(0xff222222),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: highlighted ? const Color(0xff20201e) : null,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(value, style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 20),
+          Text(
+            value,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: highlighted ? const Color(0xff20201e) : null,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(detail, style: theme.textTheme.bodySmall),
+          Text(
+            detail,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: highlighted ? const Color(0xff514700) : null,
+            ),
+          ),
           if (secondary != null)
             Text(
               'Предыдущий период: $secondary',
@@ -522,9 +564,6 @@ class _RecordCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: .4),
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,9 +624,6 @@ class _AmountRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: .4),
-        ),
       ),
       child: Row(
         children: [
