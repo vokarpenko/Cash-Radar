@@ -550,6 +550,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -944,6 +945,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   void _showDetails(TransactionEntry item) {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,

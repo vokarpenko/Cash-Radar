@@ -132,6 +132,7 @@ void main() {
     expect(find.byKey(const ValueKey('transaction-filter-Тип')), findsNothing);
     await tester.tap(find.byTooltip('Показать фильтры'));
     await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(BottomSheet)).width, 390);
     expect(
       find.byKey(const ValueKey('transaction-filter-Тип')),
       findsOneWidget,
@@ -141,6 +142,7 @@ void main() {
     await tester.tap(find.text('Покупка'));
     await tester.pumpAndSettle();
     expect(find.text('Детали операции'), findsOneWidget);
+    expect(tester.getSize(find.byType(BottomSheet)).width, 390);
     expect(find.text('Изменить'), findsOneWidget);
     expect(find.text('Удалить'), findsOneWidget);
   });
