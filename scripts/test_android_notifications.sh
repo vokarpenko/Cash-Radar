@@ -20,6 +20,7 @@ flutter build apk --debug --no-pub --dart-define-from-file=config/local-supabase
 # -r retains app data and notification access; a conflicting signature fails safely.
 adb -s "$serial" install -r build/app/outputs/flutter-apk/app-debug.apk
 adb -s "$serial" install -r build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s "$serial" shell am start -n com.example.cash_radar/.MainActivity
 printf '\nEnable Android notification access and collection in CashRadar before continuing.\n'
 read -r -p 'Press Enter when ready... '
 out=$(mktemp "${TMPDIR:-/tmp}/cashradar-test.XXXXXX")
