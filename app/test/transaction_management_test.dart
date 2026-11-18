@@ -326,7 +326,7 @@ void main() {
       ),
     );
     await open(tester);
-    await tester.tap(find.byType(DropdownButtonFormField<String>).at(0));
+    await tester.tap(find.byKey(const ValueKey('transaction-filter-Тип')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Доход').last);
     await tester.pumpAndSettle();
@@ -334,7 +334,7 @@ void main() {
     expect(find.text('Покупка'), findsNothing);
     await tester.tap(find.text('Сбросить фильтры'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButtonFormField<String>).at(3));
+    await tester.tap(find.byKey(const ValueKey('transaction-filter-Валюта')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('EUR').last);
     await tester.pumpAndSettle();

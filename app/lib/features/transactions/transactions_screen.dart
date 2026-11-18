@@ -135,26 +135,91 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     ValueChanged<String> onChanged,
   ) {
     final selected = choices.containsKey(value) ? value : '';
+    final scheme = Theme.of(context).colorScheme;
+    final options = <String, String>{'': 'Все', ...choices};
+    final border = BorderRadius.circular(14);
     return SizedBox(
       width: 200,
-      child: DropdownButtonFormField<String>(
-        borderRadius: BorderRadius.circular(16),
-        dropdownColor: Theme.of(context).colorScheme.surface,
-        menuMaxHeight: 320,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded),
-        key: ValueKey('$label-$selected-${choices.keys.join(",")}'),
-        initialValue: selected,
-        isExpanded: true,
-        decoration: InputDecoration(labelText: label),
-        items: [
-          const DropdownMenuItem(value: '', child: Text('Все')),
-          for (final entry in choices.entries)
-            DropdownMenuItem(
-              value: entry.key,
-              child: Text(entry.value, overflow: TextOverflow.ellipsis),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ),
+          Material(
+            color: scheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: border,
+              side: BorderSide(color: scheme.outlineVariant),
             ),
+            clipBehavior: Clip.antiAlias,
+            child: PopupMenuButton<String>(
+              key: ValueKey('transaction-filter-$label'),
+              tooltip: '',
+              position: PopupMenuPosition.under,
+              offset: const Offset(0, 6),
+              elevation: 3,
+              color: scheme.surface,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 200,
+                maxWidth: 300,
+                maxHeight: 320,
+              ),
+              borderRadius: border,
+              onSelected: (v) => setState(() => onChanged(v)),
+              itemBuilder: (context) => [
+                for (final entry in options.entries)
+                  PopupMenuItem<String>(
+                    value: entry.key,
+                    height: 48,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (entry.key == selected)
+                          Icon(
+                            Icons.check_rounded,
+                            size: 20,
+                            color: scheme.primary,
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+              child: Semantics(
+                label: '$label: ${options[selected]}',
+                child: SizedBox(
+                  height: 48,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            options[selected]!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
-        onChanged: (v) => setState(() => onChanged(v ?? '')),
       ),
     );
   }
