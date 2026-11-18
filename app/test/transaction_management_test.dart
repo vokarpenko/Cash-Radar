@@ -249,7 +249,7 @@ void main() {
       expect(repository.lastInput!.accountAmount, '5000.01');
       expect(find.text('Завтрак'), findsOneWidget);
       expect(find.text('−12.34 EUR'), findsOneWidget);
-      expect(find.text('По счёту: −5000.01 AMD'), findsOneWidget);
+      expect(find.text('По счёту: −5 000.01 AMD'), findsOneWidget);
       await tester.tap(find.text('Изменить'));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -486,7 +486,7 @@ void main() {
         ),
       );
       await open(tester);
-      await tester.enterText(find.widgetWithText(TextField, 'Поиск'), 'пицца');
+      await tester.enterText(find.byType(TextField).first, 'пицца');
       await tester.pumpAndSettle();
       expect(find.text('Операции не найдены'), findsOneWidget);
       await tester.tap(find.text('Сбросить фильтры'));
