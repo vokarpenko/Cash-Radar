@@ -164,7 +164,7 @@ class _PendingNotificationsDialogState
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        '${Money.displayStored(item.amount)} ${item.currency}',
+                                        '${Money.formatStored(item.amount)} ${item.currency}',
                                         style: theme.textTheme.titleSmall,
                                       ),
                                     ],

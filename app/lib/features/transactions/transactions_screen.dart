@@ -496,8 +496,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   Widget _card(TransactionEntry item) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final amount = Money.displayStored(item.amount);
-    final accountAmount = Money.displayStored(item.accountAmount);
+    final amount = Money.formatStored(item.amount);
+    final accountAmount = Money.formatStored(item.accountAmount);
     final sign = item.type == 'income' ? '+' : '−';
     final transfer = item.transferGroupId != null;
     final canEdit =

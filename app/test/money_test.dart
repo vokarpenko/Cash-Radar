@@ -18,6 +18,20 @@ void main() {
     expect(Money.tryParse(''), isNull);
   });
   test(
+    'groups read-only amounts without changing precision or input format',
+    () {
+      expect(Money.formatStored('1357697.41'), '1\u00a0357\u00a0697.41');
+      expect(Money.formatStored('-7820.2400'), '-7\u00a0820.24');
+      expect(Money.formatStored('999.9'), '999.90');
+      expect(
+        Money.formatStored('1000000000000000000.0001'),
+        '1\u00a0000\u00a0000\u00a0000\u00a0000\u00a0000\u00a0000.0001',
+      );
+      expect(Money.formatStored('invalid'), 'invalid');
+      expect(Money.displayStored('1000'), '1000.00');
+    },
+  );
+  test(
     'displays stored values without rounding or losing significant digits',
     () {
       expect(Money.displayStored('1000.0000'), '1000.00');

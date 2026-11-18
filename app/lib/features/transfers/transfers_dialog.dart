@@ -88,7 +88,7 @@ class _TransfersDialogState extends ConsumerState<TransfersDialog> {
       ) ??
       false;
   String _pair(Map<String, dynamic> r) =>
-      '${r['debit_account']}: ${Money.displayStored(r['debit_amount'] as String)} ${r['debit_currency']} → ${r['credit_account']}: ${Money.displayStored(r['credit_amount'] as String)} ${r['credit_currency']}';
+      '${r['debit_account']}: ${Money.formatStored(r['debit_amount'] as String)} ${r['debit_currency']} → ${r['credit_account']}: ${Money.formatStored(r['credit_amount'] as String)} ${r['credit_currency']}';
   Future<void> _openForm(Widget child) async {
     if (_busy || _nav.userId != _owner) return;
     await showDialog<void>(context: context, builder: (_) => child);
@@ -241,7 +241,7 @@ class _TransfersDialogState extends ConsumerState<TransfersDialog> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(_pair(g)),
                       subtitle: Text(
-                        '${g['debit_date']} → ${g['credit_date']}${g['fee_amount'] == null ? '' : ' · комиссия ${Money.displayStored(g['fee_amount'] as String)} ${g['fee_currency']}'}',
+                        '${g['debit_date']} → ${g['credit_date']}${g['fee_amount'] == null ? '' : ' · комиссия ${Money.formatStored(g['fee_amount'] as String)} ${g['fee_currency']}'}',
                       ),
                       trailing: TextButton(
                         onPressed: _busy
@@ -532,7 +532,7 @@ class _LinkTransferFormState extends ConsumerState<LinkTransferForm> {
   }
 
   String _title(TransactionEntry t) =>
-      '${t.date} · ${t.accountName} · ${Money.displayStored(t.accountAmount)} ${t.accountCurrency}';
+      '${t.date} · ${t.accountName} · ${Money.formatStored(t.accountAmount)} ${t.accountCurrency}';
   @override
   Widget build(BuildContext context) {
     final items =
@@ -774,7 +774,7 @@ class _CashTransferFormState extends ConsumerState<CashTransferForm> {
                   DropdownMenuItem(
                     value: t.id,
                     child: Text(
-                      '${t.date} · ${t.accountName} · ${Money.displayStored(t.accountAmount)} ${t.accountCurrency}',
+                      '${t.date} · ${t.accountName} · ${Money.formatStored(t.accountAmount)} ${t.accountCurrency}',
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
