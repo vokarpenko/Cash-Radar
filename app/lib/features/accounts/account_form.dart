@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -112,6 +113,10 @@ class _AccountFormState extends ConsumerState<AccountForm> {
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           child: Form(
             key: _form,
             child: Column(

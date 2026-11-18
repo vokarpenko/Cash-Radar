@@ -629,6 +629,10 @@ class _BudgetDialogState extends ConsumerState<BudgetDialog> {
         child: Form(
           key: _form,
           child: SingleChildScrollView(
+            controller: ActionSheetScroll.maybeOf(context),
+            physics: ActionSheetScroll.maybeOf(context) == null
+                ? null
+                : const AlwaysScrollableScrollPhysics(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -114,6 +114,10 @@ class _RulesDialogState extends ConsumerState<RulesDialog> {
                       .firstOrNull ??
                   'Без категории';
               return ListView(
+                controller: ActionSheetScroll.maybeOf(context),
+                physics: ActionSheetScroll.maybeOf(context) == null
+                    ? null
+                    : const AlwaysScrollableScrollPhysics(),
                 shrinkWrap: true,
                 children: [
                   const Text(
@@ -272,6 +276,10 @@ class _RuleEditorState extends State<_RuleEditor> {
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           child: Form(
             key: _form,
             child: Column(

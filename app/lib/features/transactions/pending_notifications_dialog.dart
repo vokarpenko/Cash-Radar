@@ -1,3 +1,4 @@
+import '../../shared/adaptive_dialog.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -114,6 +115,10 @@ class _PendingNotificationsDialogState
                 data: (items) => items.isEmpty
                     ? const Center(child: Text('Новых уведомлений нет'))
                     : ListView.separated(
+                        controller: ActionSheetScroll.maybeOf(context),
+                        physics: ActionSheetScroll.maybeOf(context) == null
+                            ? null
+                            : const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         itemCount: items.length,
                         separatorBuilder: (_, _) =>

@@ -109,6 +109,10 @@ class _TransfersDialogState extends ConsumerState<TransfersDialog> {
       content: SizedBox(
         width: 760,
         child: ListView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           shrinkWrap: true,
           children: [
             const Text(
@@ -348,6 +352,10 @@ class _ManualTransferFormState extends ConsumerState<ManualTransferForm> {
       content: SizedBox(
         width: 450,
         child: SingleChildScrollView(
+          controller: ActionSheetScroll.maybeOf(context),
+          physics: ActionSheetScroll.maybeOf(context) == null
+              ? null
+              : const AlwaysScrollableScrollPhysics(),
           child: Form(
             key: _form,
             child: Column(
