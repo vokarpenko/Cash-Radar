@@ -7,6 +7,7 @@ import '../accounts/money_input_formatter.dart';
 import '../settings/currency_repository.dart';
 import '../transactions/transactions_repository.dart';
 import 'analytics_repository.dart';
+import 'period_analytics.dart';
 
 const _months = [
   'январь',
@@ -334,6 +335,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           ),
         for (var i = 0; i < rows.length; i++)
           _category(rows[i], currency, _colors[i % _colors.length]),
+        if (_owner != null)
+          PeriodAnalytics(owner: _owner!, currency: currency, month: _month),
         const SizedBox(height: 20),
       ],
     );

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Local-only API test with a temporary synthetic account. Never prints credentials."""
 import json, shutil, subprocess, time, urllib.error, urllib.request
+from decimal import Decimal
 from pathlib import Path
 root = Path(__file__).resolve().parents[2]
 cli = [shutil.which('supabase')] if shutil.which('supabase') else ['npx', '--yes', 'supabase@3']
@@ -36,6 +37,10 @@ try:
     require(code == 200, 'cannot save budget')
     code, rows = request('/rest/v1/rpc/monthly_analytics_activity', 'POST', {'p_month':'2026-01-01'}, token=token)
     require(code == 200 and len(rows) == 1 and rows[0]['amount'] == '10.00' and rows[0]['account_amount'] == '4000.00', 'analytics lost precision or actual amount')
+    code, rows = request('/rest/v1/rpc/period_analytics_activity', 'POST', {'p_start':'2026-01-15','p_end':'2026-01-15'}, token=token)
+    require(code == 200 and len(rows) == 1 and rows[0]['account_name'] == 'Synthetic' and rows[0]['amount'] == '10.00', 'period analytics lost account or amount')
+    code, rows = request('/rest/v1/account_balances?select=current_balance&limit=1', token=token)
+    require(code == 200 and len(rows) == 1 and Decimal(rows[0]['current_balance']) == Decimal('-4000'), 'account balance not available to analytics')
     code, rows = request('/rest/v1/rpc/effective_monthly_budgets', 'POST', {'p_month':'2026-02-01'}, token=token)
     require(code == 200 and len(rows) == 1 and rows[0]['currency'] == 'AMD' and rows[0]['amount'] == '5000', 'budget did not recur')
     print('Local budget API: exact amounts, actual account debit and recurring limit passed.')

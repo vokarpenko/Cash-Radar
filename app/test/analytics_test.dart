@@ -1,5 +1,6 @@
 import 'package:cash_radar/app/app_shell.dart';
 import 'package:cash_radar/features/analytics/analytics_repository.dart';
+import 'package:cash_radar/features/analytics/period_report.dart';
 import 'package:cash_radar/features/settings/currency_repository.dart';
 import 'package:cash_radar/features/transactions/transactions_repository.dart';
 import 'package:cash_radar/main.dart';
@@ -60,6 +61,32 @@ class MemoryAnalytics implements AnalyticsRepository {
   }
 }
 
+class MemoryPeriodReport implements PeriodReportRepository {
+  @override
+  Future<PeriodReport> load(
+    DateTime start,
+    DateTime end,
+    String currency,
+  ) async => PeriodReport(
+    start: start,
+    end: end,
+    currency: currency,
+    balance: BigInt.from(12345),
+    current: Turnover(expense: BigInt.from(1000)),
+    previous: Turnover(expense: BigInt.from(500)),
+    previousStart: start.subtract(const Duration(days: 30)),
+    previousEnd: start.subtract(const Duration(days: 1)),
+    trend: {
+      dateKey(DateTime(start.year, start.month, 1)): Turnover(
+        expense: BigInt.from(1000),
+      ),
+    },
+    accounts: [],
+    currencies: {},
+    categories: {},
+  );
+}
+
 void main() {
   test('fixed-point conversion keeps exact cents and rounds once', () {
     final rates = ExchangeRates(
@@ -98,6 +125,9 @@ void main() {
         ProviderScope(
           overrides: [
             analyticsRepositoryProvider.overrideWithValue(budgets),
+            periodReportRepositoryProvider.overrideWithValue(
+              MemoryPeriodReport(),
+            ),
             currencyRepositoryProvider.overrideWithValue(currency),
             transactionsRepositoryProvider.overrideWithValue(
               MemoryTransactions(),
@@ -127,6 +157,8 @@ void main() {
       expect(budgets.savedCurrency, 'AMD');
       await tester.tap(find.text('Доходы'));
       await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).last, const Offset(0, 350));
+      await tester.pumpAndSettle();
       expect(find.text('Зарплата'), findsOneWidget);
       expect(find.text('Еда'), findsNothing);
       await tester.tap(find.byType(DropdownButton<String>));
@@ -135,6 +167,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(currency.currency, 'RUB');
       expect(find.text('500.00 RUB'), findsWidgets);
+      await tester.drag(find.byType(ListView).last, const Offset(0, -1200));
+      await tester.pumpAndSettle();
+      expect(find.text('Текущий общий баланс'), findsOneWidget);
+      expect(find.text('123.45 RUB'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

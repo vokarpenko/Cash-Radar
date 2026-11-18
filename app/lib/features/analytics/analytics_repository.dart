@@ -21,7 +21,9 @@ class ExchangeRates {
         BigInt.parse((fraction.padRight(scale, '0')).substring(0, scale));
   }
 
-  static BigInt cents(String amount) => _scaled(amount, 2);
+  static BigInt cents(String amount) => amount.startsWith('-')
+      ? -_scaled(amount.substring(1), 2)
+      : _scaled(amount, 2);
   static String display(BigInt value) {
     final negative = value.isNegative;
     final absolute = value.abs();
@@ -34,12 +36,54 @@ class ExchangeRates {
     if (source == null || target == null) {
       throw const FormatException('Missing currency rate');
     }
-    final numerator = cents * _scaled(source, 8);
+    final numerator = cents.abs() * _scaled(source, 8);
     final denominator = _scaled(target, 8);
     if (denominator <= BigInt.zero) {
       throw const FormatException('Invalid exchange rate');
     }
-    return (numerator * BigInt.two + denominator) ~/ (denominator * BigInt.two);
+    final rounded =
+        (numerator * BigInt.two + denominator) ~/ (denominator * BigInt.two);
+    return cents.isNegative ? -rounded : rounded;
+  }
+}
+
+/// Public quotes are shared briefly so adjacent analytics sections use one snapshot.
+class RateQuoteCache {
+  static ExchangeRates? _value;
+  static DateTime? _loadedAt;
+  static Future<ExchangeRates>? _pending;
+
+  static Future<ExchangeRates> load(SupabaseClient client) async {
+    final value = _value, loadedAt = _loadedAt;
+    if (value != null &&
+        loadedAt != null &&
+        DateTime.now().difference(loadedAt) < const Duration(minutes: 5)) {
+      return value;
+    }
+    final existing = _pending;
+    if (existing != null) return existing;
+    final request = _fetch(client);
+    _pending = request;
+    try {
+      final result = await request;
+      _value = result;
+      _loadedAt = DateTime.now();
+      return result;
+    } finally {
+      _pending = null;
+    }
+  }
+
+  static Future<ExchangeRates> _fetch(SupabaseClient client) async {
+    final response = await client.functions.invoke('exchange-rates');
+    final data = response.data as Map<String, dynamic>;
+    final values = (data['rates'] as Map<String, dynamic>).map(
+      (key, value) => MapEntry(key, value as String),
+    );
+    return ExchangeRates(
+      values: values,
+      asOf: DateTime.parse(data['asOf'] as String),
+    );
   }
 }
 
@@ -118,15 +162,7 @@ class SupabaseAnalyticsRepository implements AnalyticsRepository {
         budgets.any((row) => row['currency'] != currency);
     ExchangeRates? rates;
     if (needRates) {
-      final response = await client.functions.invoke('exchange-rates');
-      final data = response.data as Map<String, dynamic>;
-      final values = (data['rates'] as Map<String, dynamic>).map(
-        (key, value) => MapEntry(key, value as String),
-      );
-      rates = ExchangeRates(
-        values: values,
-        asOf: DateTime.parse(data['asOf'] as String),
-      );
+      rates = await RateQuoteCache.load(client);
     }
     final amounts = <String, BigInt>{};
     final counts = <String, int>{};
