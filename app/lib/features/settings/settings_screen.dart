@@ -1,10 +1,10 @@
+import '../../widgets/currency_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_config.dart';
 import '../notifications/notification_bridge.dart';
 import '../../app/auth_navigation.dart';
-import '../accounts/money.dart';
 import '../categorization/rules_screen.dart';
 import 'currency_repository.dart';
 
@@ -193,17 +193,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                     onPressed: () => ref.invalidate(baseCurrencyProvider),
                     child: const Text('Повторить'),
                   ),
-                  data: (value) => DropdownButton<String>(
-                    value: supportedCurrencies.contains(value) ? value : null,
-                    hint: const Text('Выберите'),
-                    items: [
-                      for (final code in supportedCurrencies)
-                        DropdownMenuItem(value: code, child: Text(code)),
-                    ],
+                  data: (value) => CurrencySelector(
+                    value: value,
                     onChanged: _saving
                         ? null
-                        : (v) {
-                            if (v != null && v != value) _setCurrency(v);
+                        : (selected) {
+                            if (selected != value) _setCurrency(selected);
                           },
                   ),
                 ),

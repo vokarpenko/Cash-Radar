@@ -353,6 +353,10 @@ class _ManualTransferFormState extends ConsumerState<ManualTransferForm> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _from,
                   decoration: const InputDecoration(labelText: 'Со счёта'),
                   items: [
@@ -366,6 +370,10 @@ class _ManualTransferFormState extends ConsumerState<ManualTransferForm> {
                   validator: (v) => v == null ? 'Выберите счёт' : null,
                 ),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _to,
                   decoration: const InputDecoration(labelText: 'На счёт'),
                   items: [
@@ -552,6 +560,10 @@ class _LinkTransferFormState extends ConsumerState<LinkTransferForm> {
               'Выберите списание и поступление с разных счетов. При конвертации проверьте фактические суммы вручную.',
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               initialValue: _debit,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Списание'),
@@ -565,6 +577,10 @@ class _LinkTransferFormState extends ConsumerState<LinkTransferForm> {
               onChanged: _busy ? null : (v) => setState(() => _debit = v),
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               initialValue: _credit,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Поступление'),
@@ -578,6 +594,10 @@ class _LinkTransferFormState extends ConsumerState<LinkTransferForm> {
               onChanged: _busy ? null : (v) => setState(() => _credit = v),
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               key: ValueKey('fee-${debit?.accountId}'),
               initialValue:
                   debit != null &&
@@ -742,6 +762,10 @@ class _CashTransferFormState extends ConsumerState<CashTransferForm> {
               'Выберите существующее списание и наличный кошелёк в той же валюте. Зачисление будет создано автоматически.',
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               initialValue: _debit,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Операция снятия'),
@@ -758,6 +782,10 @@ class _CashTransferFormState extends ConsumerState<CashTransferForm> {
               onChanged: _busy ? null : (v) => setState(() => _debit = v),
             ),
             DropdownButtonFormField<String>(
+              borderRadius: BorderRadius.circular(16),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              menuMaxHeight: 320,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
               initialValue: _wallet,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Наличный кошелёк'),

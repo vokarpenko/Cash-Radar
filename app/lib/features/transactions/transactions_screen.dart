@@ -138,6 +138,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return SizedBox(
       width: 200,
       child: DropdownButtonFormField<String>(
+        borderRadius: BorderRadius.circular(16),
+        dropdownColor: Theme.of(context).colorScheme.surface,
+        menuMaxHeight: 320,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded),
         key: ValueKey('$label-$selected-${choices.keys.join(",")}'),
         initialValue: selected,
         isExpanded: true,

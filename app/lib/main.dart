@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/auth_navigation.dart';
 import 'app/cash_radar_app.dart';
+import 'app/app_theme.dart';
 import 'config/app_config.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/secure_session_storage.dart';
@@ -69,7 +70,7 @@ class CashRadarApp extends StatelessWidget {
     if (service == null) {
       return MaterialApp(
         title: 'CashRadar',
-        theme: ThemeData(colorSchemeSeed: Colors.teal),
+        theme: buildAppTheme(Brightness.light),
         home: HealthScreen(
           check: check,
           configurationError: configurationError,

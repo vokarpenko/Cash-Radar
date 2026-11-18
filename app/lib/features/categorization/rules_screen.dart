@@ -277,6 +277,10 @@ class _RuleEditorState extends State<_RuleEditor> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _kind,
                   decoration: const InputDecoration(labelText: 'Тип операции'),
                   items: const [
@@ -290,6 +294,10 @@ class _RuleEditorState extends State<_RuleEditor> {
                 ),
                 if (!widget.alias)
                   DropdownButtonFormField<String>(
+                    borderRadius: BorderRadius.circular(16),
+                    dropdownColor: Theme.of(context).colorScheme.surface,
+                    menuMaxHeight: 320,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
                     initialValue: _type,
                     decoration: const InputDecoration(labelText: 'Условие'),
                     items: const [
@@ -337,6 +345,10 @@ class _RuleEditorState extends State<_RuleEditor> {
                         : 'Минимум 3 символа',
                   ),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   key: ValueKey('rule-cat-$_kind'),
                   initialValue: _category,
                   decoration: InputDecoration(

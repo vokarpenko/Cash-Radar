@@ -2,13 +2,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/auth_navigation.dart';
+import '../../widgets/currency_selector.dart';
 import '../accounts/money.dart';
 import '../accounts/money_input_formatter.dart';
 import '../settings/currency_repository.dart';
 import '../transactions/transactions_repository.dart';
 import 'analytics_repository.dart';
 import 'analytics_format.dart';
-import '../../app/theme_preference.dart';
 import 'period_analytics.dart';
 
 const _months = [
@@ -131,220 +131,128 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final theme = Theme.of(context),
         currencyValue = ref.watch(baseCurrencyProvider);
     final owner = _owner;
-    final dark = ref.watch(appDarkModeProvider);
-    final foreground = dark ? const Color(0xfff5f5f1) : const Color(0xff20201e);
-    final scheme = theme.colorScheme.copyWith(
-      primary: dark ? const Color(0xffffd500) : const Color(0xff222222),
-      onPrimary: dark ? const Color(0xff191919) : Colors.white,
-      primaryContainer: const Color(0xffffd500),
-      onPrimaryContainer: const Color(0xff191919),
-      secondaryContainer: const Color(0xffffd500),
-      onSecondaryContainer: const Color(0xff191919),
-      surface: dark ? const Color(0xff252525) : Colors.white,
-      surfaceContainerLow: dark
-          ? const Color(0xff30302e)
-          : const Color(0xfff5f5f2),
-      outline: dark ? const Color(0xff777770) : const Color(0xffb8b8b0),
-      outlineVariant: dark ? const Color(0xff454540) : const Color(0xffe9e9e4),
-    );
-    return Theme(
-      data: theme.copyWith(
-        colorScheme: scheme,
-        cardTheme: CardThemeData(
-          color: scheme.surface,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-        ),
-        textTheme: theme.textTheme
-            .apply(bodyColor: foreground, displayColor: foreground)
-            .copyWith(
-              titleLarge: theme.textTheme.titleLarge?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -.4,
-              ),
-              titleMedium: theme.textTheme.titleMedium?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.w600,
-              ),
-              headlineSmall: theme.textTheme.headlineSmall?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -.6,
-              ),
-              bodySmall: theme.textTheme.bodySmall?.copyWith(
-                color: dark ? const Color(0xffb8b8b0) : const Color(0xff777770),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'Аналитика',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1.2,
               ),
             ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xffffd500),
-            foregroundColor: const Color(0xff191919),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: foreground,
-            side: BorderSide(color: scheme.outlineVariant),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        ),
-        segmentedButtonTheme: SegmentedButtonThemeData(
-          style: ButtonStyle(
-            side: WidgetStatePropertyAll(
-              BorderSide(color: scheme.outlineVariant),
-            ),
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-          ),
-        ),
-        progressIndicatorTheme: ProgressIndicatorThemeData(
-          color: const Color(0xffffd500),
-          linearTrackColor: dark
-              ? const Color(0xff3a3a37)
-              : const Color(0xfff0f0eb),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                'Аналитика',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1.2,
-                ),
+            currencyValue.when(
+              data: (currency) => CurrencySelector(
+                value: currency,
+                onChanged: (value) {
+                  if (value != currency) _changeCurrency(value);
+                },
               ),
-              currencyValue.when(
-                data: (currency) => DropdownButton<String>(
-                  value: supportedCurrencies.contains(currency)
-                      ? currency
-                      : null,
-                  hint: const Text('Валюта'),
-                  items: [
-                    for (final code in supportedCurrencies)
-                      DropdownMenuItem(value: code, child: Text(code)),
-                  ],
-                  onChanged: (v) {
-                    if (v != null && v != currency) _changeCurrency(v);
-                  },
-                ),
-                error: (_, _) => TextButton(
-                  onPressed: () => ref.invalidate(baseCurrencyProvider),
-                  child: const Text('Повторить загрузку валюты'),
-                ),
-                loading: () => const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+              error: (_, _) => TextButton(
+                onPressed: () => ref.invalidate(baseCurrencyProvider),
+                child: const Text('Повторить загрузку валюты'),
               ),
-              currencyValue.maybeWhen(
-                data: (currency) => MediaQuery.sizeOf(context).width < 560
-                    ? IconButton.filled(
-                        tooltip: 'Установить бюджет',
-                        onPressed: () => _budget(currency),
-                        icon: const Icon(Icons.add),
-                      )
-                    : FilledButton.icon(
-                        onPressed: () => _budget(currency),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Установить бюджет'),
+              loading: () => const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            currencyValue.maybeWhen(
+              data: (currency) => MediaQuery.sizeOf(context).width < 560
+                  ? IconButton.filled(
+                      tooltip: 'Установить бюджет',
+                      onPressed: () => _budget(currency),
+                      icon: const Icon(Icons.add),
+                    )
+                  : FilledButton.icon(
+                      onPressed: () => _budget(currency),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Установить бюджет'),
+                    ),
+              orElse: () => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            IconButton(
+              tooltip: 'Предыдущий месяц',
+              onPressed: _month.year > 1900 || _month.month > 1
+                  ? () => setState(
+                      () => _month = DateTime(_month.year, _month.month - 1),
+                    )
+                  : null,
+              icon: const Icon(Icons.chevron_left),
+            ),
+            Text(
+              '${_months[_month.month - 1]} ${_month.year}',
+              style: theme.textTheme.titleMedium,
+            ),
+            IconButton(
+              tooltip: 'Следующий месяц',
+              onPressed: _month.year < 2100 || _month.month < 12
+                  ? () => setState(
+                      () => _month = DateTime(_month.year, _month.month + 1),
+                    )
+                  : null,
+              icon: const Icon(Icons.chevron_right),
+            ),
+            const SizedBox(width: 8),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: true, label: Text('Расходы')),
+                ButtonSegment(value: false, label: Text('Доходы')),
+              ],
+              selected: {_expense},
+              onSelectionChanged: (value) =>
+                  setState(() => _expense = value.first),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: currencyValue.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) =>
+                const Center(child: Text('Не удалось загрузить валюту.')),
+            data: (currency) {
+              if (owner == null) return const SizedBox.shrink();
+              final key = (owner, _monthKey(_month), currency);
+              return ref
+                  .watch(monthlyAnalyticsProvider(key))
+                  .when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (_, _) => Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Не удалось загрузить аналитику или курсы валют.',
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                ref.invalidate(monthlyAnalyticsProvider(key)),
+                            child: const Text('Повторить'),
+                          ),
+                        ],
                       ),
-                orElse: () => const SizedBox.shrink(),
-              ),
-            ],
+                    ),
+                    data: (data) => _content(data, currency),
+                  );
+            },
           ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              IconButton(
-                tooltip: 'Предыдущий месяц',
-                onPressed: _month.year > 1900 || _month.month > 1
-                    ? () => setState(
-                        () => _month = DateTime(_month.year, _month.month - 1),
-                      )
-                    : null,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Text(
-                '${_months[_month.month - 1]} ${_month.year}',
-                style: theme.textTheme.titleMedium,
-              ),
-              IconButton(
-                tooltip: 'Следующий месяц',
-                onPressed: _month.year < 2100 || _month.month < 12
-                    ? () => setState(
-                        () => _month = DateTime(_month.year, _month.month + 1),
-                      )
-                    : null,
-                icon: const Icon(Icons.chevron_right),
-              ),
-              const SizedBox(width: 8),
-              SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(value: true, label: Text('Расходы')),
-                  ButtonSegment(value: false, label: Text('Доходы')),
-                ],
-                selected: {_expense},
-                onSelectionChanged: (value) =>
-                    setState(() => _expense = value.first),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: currencyValue.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, _) =>
-                  const Center(child: Text('Не удалось загрузить валюту.')),
-              data: (currency) {
-                if (owner == null) return const SizedBox.shrink();
-                final key = (owner, _monthKey(_month), currency);
-                return ref
-                    .watch(monthlyAnalyticsProvider(key))
-                    .when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (_, _) => Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Не удалось загрузить аналитику или курсы валют.',
-                            ),
-                            TextButton(
-                              onPressed: () =>
-                                  ref.invalidate(monthlyAnalyticsProvider(key)),
-                              child: const Text('Повторить'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      data: (data) => _content(data, currency),
-                    );
-              },
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -510,7 +418,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerLow,
+          color: theme.brightness == Brightness.dark
+              ? const Color(0xff292929)
+              : const Color(0xfff5f5f2),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -740,6 +650,10 @@ class _BudgetDialogState extends ConsumerState<BudgetDialog> {
                         .where((e) => e.kind == 'expense')
                         .toList();
                     return DropdownButtonFormField<String>(
+                      borderRadius: BorderRadius.circular(16),
+                      dropdownColor: Theme.of(context).colorScheme.surface,
+                      menuMaxHeight: 320,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       initialValue: options.any((e) => e.id == _category)
                           ? _category
                           : null,
@@ -764,6 +678,10 @@ class _BudgetDialogState extends ConsumerState<BudgetDialog> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  menuMaxHeight: 320,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _currency,
                   decoration: const InputDecoration(labelText: 'Валюта лимита'),
                   items: [

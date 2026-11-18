@@ -472,12 +472,12 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final yellowCard = highlighted && !dark;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: highlighted
-            ? const Color(0xffffd500)
-            : theme.colorScheme.surface,
+        color: yellowCard ? const Color(0xffffd500) : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -489,15 +489,21 @@ class _MetricCard extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: highlighted
+                  color: yellowCard
                       ? const Color(0xff1f1f1d)
+                      : dark
+                      ? const Color(0xff303030)
                       : const Color(0xfffff4b8),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
                   size: 20,
-                  color: highlighted ? Colors.white : const Color(0xff222222),
+                  color: yellowCard
+                      ? Colors.white
+                      : dark
+                      ? const Color(0xffffd500)
+                      : const Color(0xff222222),
                 ),
               ),
               const SizedBox(width: 10),
@@ -505,7 +511,7 @@ class _MetricCard extends StatelessWidget {
                 child: Text(
                   label,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: highlighted ? const Color(0xff20201e) : null,
+                    color: yellowCard ? const Color(0xff20201e) : null,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -516,14 +522,14 @@ class _MetricCard extends StatelessWidget {
           Text(
             value,
             style: theme.textTheme.headlineSmall?.copyWith(
-              color: highlighted ? const Color(0xff20201e) : null,
+              color: yellowCard ? const Color(0xff20201e) : null,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             detail,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: highlighted ? const Color(0xff514700) : null,
+              color: yellowCard ? const Color(0xff514700) : null,
             ),
           ),
           if (secondary != null)

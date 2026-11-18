@@ -434,6 +434,10 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                     child: const Text('Не удалось загрузить счета. Повторить'),
                   ),
                   data: (_) => DropdownButtonFormField<String>(
+                    borderRadius: BorderRadius.circular(16),
+                    dropdownColor: Theme.of(context).colorScheme.surface,
+                    menuMaxHeight: 320,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
                     key: ValueKey('import-account-${chosen?.id}'),
                     initialValue: chosen?.id,
                     isExpanded: true,

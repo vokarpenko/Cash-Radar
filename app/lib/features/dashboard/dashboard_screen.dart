@@ -15,7 +15,9 @@ class DashboardScreen extends StatelessWidget {
       ),
       const SizedBox(height: 28),
       Card(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).colorScheme.surface
+            : Theme.of(context).colorScheme.primaryContainer,
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Column(
