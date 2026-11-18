@@ -53,6 +53,7 @@ ThemeData buildAppTheme(Brightness brightness) {
   );
   final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
   return base.copyWith(
+    hoverColor: foreground.withValues(alpha: dark ? .08 : .06),
     scaffoldBackgroundColor: dark
         ? AppColors.darkBackground
         : AppColors.lightBackground,
@@ -137,6 +138,9 @@ ThemeData buildAppTheme(Brightness brightness) {
       backgroundColor: surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    ),
+    listTileTheme: ListTileThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
