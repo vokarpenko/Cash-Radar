@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/accounts/accounts_screen.dart';
+import '../features/analytics/analytics_screen.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/imports/imports_screen.dart';
@@ -13,6 +14,7 @@ import 'auth_navigation.dart';
 
 const _protectedPaths = {
   '/dashboard',
+  '/analytics',
   '/accounts',
   '/transactions',
   '/imports',
@@ -64,6 +66,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/analytics',
+            builder: (context, state) => const AnalyticsScreen(),
           ),
           GoRoute(
             path: '/accounts',
