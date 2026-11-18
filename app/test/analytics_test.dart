@@ -1,5 +1,6 @@
 import 'package:cash_radar/app/app_shell.dart';
 import 'package:cash_radar/features/analytics/analytics_repository.dart';
+import 'package:cash_radar/features/analytics/analytics_format.dart';
 import 'package:cash_radar/features/analytics/period_report.dart';
 import 'package:cash_radar/features/settings/currency_repository.dart';
 import 'package:cash_radar/features/transactions/transactions_repository.dart';
@@ -81,8 +82,17 @@ class MemoryPeriodReport implements PeriodReportRepository {
         expense: BigInt.from(1000),
       ),
     },
-    accounts: [],
-    currencies: {},
+    accounts: [
+      ReportAccount(
+        id: 'a',
+        name: 'Карта',
+        active: true,
+        currency: 'AMD',
+        balance: BigInt.from(25000),
+        convertedBalance: BigInt.from(25000),
+      ),
+    ],
+    currencies: {'AMD': Turnover(expense: BigInt.from(1000))},
     categories: {},
   );
 }
@@ -108,6 +118,10 @@ void main() {
     expect(
       () => rates.convert(BigInt.one, 'EUR', 'AMD'),
       throwsFormatException,
+    );
+    expect(
+      analyticsAmount(BigInt.parse('-123456789')),
+      '−1\u202f234\u202f567.89',
     );
   });
   testWidgets(
@@ -141,7 +155,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Аналитика'), findsWidgets);
       expect(find.textContaining('Превышение'), findsWidgets);
-      await tester.drag(find.byType(ListView).last, const Offset(0, -400));
+      expect(find.text('Текущий общий баланс'), findsOneWidget);
+      await tester.ensureVisible(find.byTooltip('Изменить бюджет'));
       await tester.pumpAndSettle();
       expect(find.text('Еда'), findsOneWidget);
       await tester.tap(find.byTooltip('Изменить бюджет'));
@@ -155,9 +170,14 @@ void main() {
       expect(budgets.savedCategory, 'food');
       expect(budgets.savedAmount, '250');
       expect(budgets.savedCurrency, 'AMD');
-      await tester.tap(find.text('Доходы'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SegmentedButton<bool>),
+          matching: find.text('Доходы'),
+        ),
+      );
       await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView).last, const Offset(0, 350));
+      await tester.ensureVisible(find.text('Зарплата'));
       await tester.pumpAndSettle();
       expect(find.text('Зарплата'), findsOneWidget);
       expect(find.text('Еда'), findsNothing);
@@ -167,11 +187,56 @@ void main() {
       await tester.pumpAndSettle();
       expect(currency.currency, 'RUB');
       expect(find.text('500.00 RUB'), findsWidgets);
-      await tester.drag(find.byType(ListView).last, const Offset(0, -1200));
+      await tester.ensureVisible(find.text('Текущий общий баланс'));
       await tester.pumpAndSettle();
       expect(find.text('Текущий общий баланс'), findsOneWidget);
       expect(find.text('123.45 RUB'), findsOneWidget);
+      await tester.ensureVisible(find.text('Карта'));
+      await tester.pumpAndSettle();
+      expect(find.text('Карта'), findsOneWidget);
+      expect(find.text('Остаток'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('analytics cards fit narrow and wide layouts', (tester) async {
+    final auth = FakeAuth()..active = true;
+    addTearDown(auth.controller.close);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(320, 700);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsRepositoryProvider.overrideWithValue(MemoryAnalytics()),
+          periodReportRepositoryProvider.overrideWithValue(
+            MemoryPeriodReport(),
+          ),
+          currencyRepositoryProvider.overrideWithValue(MemoryCurrency()),
+          transactionsRepositoryProvider.overrideWithValue(
+            MemoryTransactions(),
+          ),
+        ],
+        child: CashRadarApp(auth: auth),
+      ),
+    );
+    await tester.pumpAndSettle();
+    GoRouter.of(tester.element(find.byType(AppShell))).go('/analytics');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Установить бюджет'));
+    await tester.pumpAndSettle();
+    expect(find.text('Установить бюджет'), findsOneWidget);
+    await tester.tap(find.text('Отмена'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Карта'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    tester.view.physicalSize = const Size(1400, 1000);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Текущий общий баланс'));
+    await tester.pumpAndSettle();
+    expect(find.text('Текущий общий баланс'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

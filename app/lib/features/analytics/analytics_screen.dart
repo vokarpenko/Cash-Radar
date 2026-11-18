@@ -7,6 +7,7 @@ import '../accounts/money_input_formatter.dart';
 import '../settings/currency_repository.dart';
 import '../transactions/transactions_repository.dart';
 import 'analytics_repository.dart';
+import 'analytics_format.dart';
 import 'period_analytics.dart';
 
 const _months = [
@@ -161,11 +162,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               ),
             ),
             currencyValue.maybeWhen(
-              data: (currency) => FilledButton.icon(
-                onPressed: () => _budget(currency),
-                icon: const Icon(Icons.add),
-                label: const Text('Установить бюджет'),
-              ),
+              data: (currency) => MediaQuery.sizeOf(context).width < 560
+                  ? IconButton.filled(
+                      tooltip: 'Установить бюджет',
+                      onPressed: () => _budget(currency),
+                      icon: const Icon(Icons.add),
+                    )
+                  : FilledButton.icon(
+                      onPressed: () => _budget(currency),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Установить бюджет'),
+                    ),
               orElse: () => const SizedBox.shrink(),
             ),
           ],
@@ -259,84 +266,133 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       BigInt.zero,
       (sum, row) => sum + row.spent,
     );
-    final usedForChart = rows.where((r) => r.spent > BigInt.zero).toList();
-    return ListView(
-      children: [
-        if (usedForChart.isNotEmpty)
-          SizedBox(
-            height: 200,
-            child: Center(
-              child: SizedBox(
-                width: 180,
-                height: 180,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CustomPaint(
-                      size: const Size(180, 180),
-                      painter: _DonutPainter(usedForChart),
-                    ),
-                    Text(
-                      _months[_month.month - 1],
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        if (usedForChart.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 26),
-            child: Center(
-              child: Text(
-                'За этот месяц операций нет',
-                style: theme.textTheme.bodyLarge,
-              ),
-            ),
-          ),
-        const SizedBox(height: 12),
-        Text(
-          '${ExchangeRates.display(total)} $currency',
-          style: theme.textTheme.headlineMedium,
-        ),
-        Text(
-          _expense ? 'Расходы за месяц' : 'Доходы за месяц',
-          style: theme.textTheme.bodyMedium,
-        ),
-        if (_expense && budgeted.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            'По категориям с лимитом: ${ExchangeRates.display(limitedSpent)} из ${ExchangeRates.display(limit)} $currency',
-          ),
-          if (limitedSpent > limit)
+    final chartRows = rows.where((r) => r.spent > BigInt.zero).toList();
+    final overview = Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              'Превышение: ${ExchangeRates.display(limitedSpent - limit)} $currency',
-              style: TextStyle(color: theme.colorScheme.error),
+              _expense ? 'Расходы по категориям' : 'Доходы по категориям',
+              style: theme.textTheme.titleLarge,
             ),
-        ],
-        if (data.ratesAsOf != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(
-              'Приблизительный пересчёт по текущему безналичному курсу покупки ACBA / Rate.am на ${data.ratesAsOf!.toLocal().toString().substring(0, 16)}. Для прошлых месяцев курс не исторический.',
+            const SizedBox(height: 4),
+            Text(
+              '${_months[_month.month - 1]} ${_month.year}',
               style: theme.textTheme.bodySmall,
             ),
-          ),
-        const SizedBox(height: 24),
-        Text('Категории', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 8),
-        if (rows.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Text(
-              'Добавьте бюджет или операции, чтобы увидеть категории.',
+            const SizedBox(height: 16),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final summary = Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (chartRows.isNotEmpty)
+                      SizedBox(
+                        width: 176,
+                        height: 176,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CustomPaint(
+                              size: const Size(176, 176),
+                              painter: _DonutPainter(chartRows),
+                            ),
+                            Text(
+                              _months[_month.month - 1],
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Icon(
+                          Icons.pie_chart_outline,
+                          size: 52,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${analyticsAmount(total)} $currency',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    Text(
+                      _expense ? 'Расходы за месяц' : 'Доходы за месяц',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    if (_expense && budgeted.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'С лимитом: ${analyticsAmount(limitedSpent)} из ${analyticsAmount(limit)} $currency',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      if (limitedSpent > limit)
+                        Text(
+                          'Превышение: ${analyticsAmount(limitedSpent - limit)} $currency',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                    ],
+                  ],
+                );
+                final categories = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (rows.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          'Добавьте бюджет или операции, чтобы увидеть категории.',
+                        ),
+                      ),
+                    for (var i = 0; i < rows.length; i++)
+                      _category(rows[i], currency, _colors[i % _colors.length]),
+                  ],
+                );
+                if (constraints.maxWidth >= 720) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: 260, child: summary),
+                      const SizedBox(width: 24),
+                      Expanded(child: categories),
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [summary, const SizedBox(height: 16), categories],
+                );
+              },
             ),
-          ),
-        for (var i = 0; i < rows.length; i++)
-          _category(rows[i], currency, _colors[i % _colors.length]),
+            if (data.ratesAsOf != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(
+                  'Приблизительный пересчёт по текущему безналичному курсу покупки ACBA / Rate.am на ${data.ratesAsOf!.toLocal().toString().substring(0, 16)}. Для прошлых месяцев курс не исторический.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    return ListView(
+      children: [
         if (_owner != null)
-          PeriodAnalytics(owner: _owner!, currency: currency, month: _month),
+          PeriodAnalytics(
+            owner: _owner!,
+            currency: currency,
+            month: _month,
+            monthlyOverview: overview,
+          ),
         const SizedBox(height: 20),
       ],
     );
@@ -376,7 +432,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        '${ExchangeRates.display(row.spent)} $currency',
+                        '${analyticsAmount(row.spent)} $currency',
                         textAlign: TextAlign.end,
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: exceeded ? theme.colorScheme.error : null,
@@ -387,7 +443,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${row.count} оп. ${limit == null ? '' : '· лимит ${ExchangeRates.display(limit)} $currency'}',
+                  '${row.count} оп. ${limit == null ? '' : '· лимит ${analyticsAmount(limit)} $currency'}',
                   style: theme.textTheme.bodySmall,
                 ),
                 if (limit != null) ...[
@@ -399,8 +455,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     exceeded
-                        ? 'Превышение ${ExchangeRates.display(row.spent - limit)} $currency'
-                        : 'Осталось ${ExchangeRates.display(limit - row.spent)} $currency',
+                        ? 'Превышение ${analyticsAmount(row.spent - limit)} $currency'
+                        : 'Осталось ${analyticsAmount(limit - row.spent)} $currency',
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
