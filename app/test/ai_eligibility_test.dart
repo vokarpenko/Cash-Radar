@@ -2,34 +2,16 @@ import 'package:cash_radar/features/categorization/ai_eligibility.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('allows public names while blocking common identifiers', () {
-    for (final name in ['Starbucks', 'Սուպերմարկետ', 'Shop & Cafe 24']) {
-      expect(isEligibleAiName(name), isTrue, reason: name);
-    }
-    for (final name in [
-      'name@example.com',
-      'VISA 1234',
-      '123456789',
-      'https://example.com',
-      'example.com',
-      'A\nB',
-    ]) {
-      expect(isEligibleAiName(name), isFalse, reason: name);
-    }
+  test('preselects groups regardless of content, up to the request limit', () {
+    final rows = [
+      {'group_id': 'first', 'merchant': 'VIVA Payment: 12345678 / reference'},
+      for (var i = 0; i < 27; i++)
+        {'group_id': 'group-$i', 'merchant': 'Public Shop'},
+    ];
+    final selected = initiallySelectedAiGroups(rows);
+    expect(selected.length, 25);
+    expect(selected, contains('first'));
+    expect(selected, contains('group-23'));
+    expect(selected, isNot(contains('group-24')));
   });
-  test(
-    'preselects at most twenty-five eligible groups and skips identifiers',
-    () {
-      final rows = [
-        {'group_id': 'private', 'merchant': 'card 1234'},
-        for (var i = 0; i < 27; i++)
-          {'group_id': 'group-$i', 'merchant': 'Public Shop'},
-      ];
-      final selected = initiallySelectedAiGroups(rows);
-      expect(selected.length, 25);
-      expect(selected, contains('group-0'));
-      expect(selected, isNot(contains('group-25')));
-      expect(selected, isNot(contains('private')));
-    },
-  );
 }

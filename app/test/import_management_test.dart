@@ -123,6 +123,12 @@ class MemoryImports implements ImportsRepository {
   Future<void> reapplyCategories(String batchId) async {}
 
   @override
+  Future<String> repeat(String batchId) async {
+    status = 'ready';
+    return batchId;
+  }
+
+  @override
   Future<void> resolveDuplicate(String itemId, String decision) async {
     reviewDecision = decision == 'clear' ? null : decision;
   }
@@ -256,8 +262,8 @@ void main() {
     await prepare(tester);
     expect(imports.submittedAccount, 'a1');
     expect(imports.submittedOwner, 'test-user');
-    expect(find.text('Предпросмотр: test.csv'), findsOneWidget);
-    expect(find.text('Счёт: Мой счёт · Ameria Bank'), findsOneWidget);
+    expect(find.text('Предпросмотр выписки'), findsOneWidget);
+    expect(find.text('Мой счёт · AMD'), findsOneWidget);
     expect(find.text('−12.34 EUR'), findsOneWidget);
     expect(find.text('Строка 2, по счёту: 5 000.00 AMD'), findsOneWidget);
     await Scrollable.ensureVisible(
@@ -270,7 +276,7 @@ void main() {
     await tester.tap(find.text('Подтвердить'));
     await tester.pumpAndSettle();
     expect(imports.confirms, 1);
-    expect(find.textContaining('Импортирован · формат'), findsOneWidget);
+    expect(find.text('Импортирован'), findsOneWidget);
     expect(find.text('Подтвердить импорт'), findsNothing);
   });
   testWidgets(
@@ -284,7 +290,7 @@ void main() {
       await open(tester);
       await prepare(tester, password: 'synthetic-only');
       expect(imports.submittedPassword, 'synthetic-only');
-      expect(find.textContaining('формат: ACBA XLSX'), findsOneWidget);
+      expect(find.text('ACBA XLSX'), findsOneWidget);
       expect(find.text('Пароль от файла ACBA'), findsNothing);
     },
   );
@@ -327,7 +333,29 @@ void main() {
     imports.format = 'ameria_xlsx_v1';
     await open(tester);
     await prepare(tester);
-    expect(find.textContaining('формат: Ameria XLSX'), findsOneWidget);
+    expect(find.text('Ameria XLSX'), findsOneWidget);
+  });
+  testWidgets('prepares a completed statement again after confirmation', (
+    tester,
+  ) async {
+    imports.status = 'completed';
+    await open(tester);
+    await prepare(tester);
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Подготовить повторно')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Подготовить повторно'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Подготовить повторно'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Готов к подтверждению'), findsWidgets);
+    expect(find.text('Подтвердить импорт'), findsOneWidget);
   });
   testWidgets('shows invalid rows and prevents partial confirmation', (
     tester,
@@ -352,7 +380,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(imports.cancellations, 1);
-    expect(find.textContaining('Отменён · формат'), findsOneWidget);
+    expect(find.text('Отменён'), findsOneWidget);
   });
   testWidgets('clears pending selection when the user changes', (tester) async {
     picker.pending = Completer<SelectedStatement?>();

@@ -1,7 +1,6 @@
 import {
   CategorizationError,
   type Group,
-  isEligiblePublicName,
   MAX_GROUPS,
   queryGemini,
 } from "./core.ts";
@@ -16,6 +15,7 @@ const cors = {
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const groupId = /^[a-f0-9]{32}$/;
+const maxRequestBytes = 128 * 1024;
 function reply(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: cors });
 }
@@ -59,7 +59,10 @@ Deno.serve(async (req) => {
       throw new Problem(401, "Войдите в аккаунт заново.");
     }
     userId = user.id;
-    if (Number(req.headers.get("content-length") ?? "0") > 16384 || !req.body) {
+    if (
+      Number(req.headers.get("content-length") ?? "0") > maxRequestBytes ||
+      !req.body
+    ) {
       throw new Problem(400, "Некорректный запрос.");
     }
     const reader = req.body.getReader();
@@ -70,7 +73,7 @@ Deno.serve(async (req) => {
         const { done, value } = await reader.read();
         if (done) break;
         total += value.length;
-        if (total > 16384) {
+        if (total > maxRequestBytes) {
           await reader.cancel();
           throw new Problem(400, "Некорректный запрос.");
         }
@@ -102,7 +105,7 @@ Deno.serve(async (req) => {
     if (
       selected.some((x) =>
         !x || typeof x.group_id !== "string" || !groupId.test(x.group_id) ||
-        typeof x.merchant !== "string" || !isEligiblePublicName(x.merchant)
+        typeof x.merchant !== "string"
       ) || new Set(selected.map((x) => x.group_id)).size !== selected.length
     ) throw new Problem(400, "Проверьте выбранные названия.");
     token = crypto.randomUUID();

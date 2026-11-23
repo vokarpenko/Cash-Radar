@@ -100,7 +100,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for test in health_check foundation statement_imports deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category internal_transfers alfa_import alfa_categories gmail_collector notification_events budget_versions monthly_analytics; do
+          for test in health_check foundation statement_imports repeat_statement_import deduplication categorization ai_categorization ai_unrecognized ai_model_quotas delivery_category own_funds_default internal_transfers alfa_import alfa_categories gmail_collector notification_events budget_versions monthly_analytics; do
             echo "Testing ${test}"
             docker exec -i supabase_db_Cash-Radar psql -U postgres -d postgres \
               -v ON_ERROR_STOP=1 < "supabase/tests/${test}.sql"

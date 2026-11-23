@@ -121,6 +121,7 @@ class _AccountFormState extends ConsumerState<AccountForm> {
             key: _form,
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextFormField(
                   controller: _name,
@@ -130,6 +131,7 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? 'Введите название' : null,
                 ),
+                const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   borderRadius: BorderRadius.circular(16),
                   dropdownColor: Theme.of(context).colorScheme.surface,
@@ -155,7 +157,8 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                           if (_type != 'bank') _bankId = null;
                         }),
                 ),
-                if (banks != null)
+                if (banks != null) ...[
+                  const SizedBox(height: 20),
                   banks.when(
                     loading: () => const Padding(
                       padding: EdgeInsets.all(16),
@@ -191,6 +194,8 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                           : (v) => setState(() => _bankId = v),
                     ),
                   ),
+                ],
+                const SizedBox(height: 20),
                 DropdownButtonFormField<String>(
                   borderRadius: BorderRadius.circular(16),
                   dropdownColor: Theme.of(context).colorScheme.surface,
@@ -214,6 +219,7 @@ class _AccountFormState extends ConsumerState<AccountForm> {
                       ? null
                       : (v) => setState(() => _currency = v!),
                 ),
+                const SizedBox(height: 20),
                 TextFormField(
                   controller: _balance,
                   enabled: !_saving,

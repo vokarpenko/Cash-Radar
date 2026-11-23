@@ -237,6 +237,7 @@ abstract interface class ImportsRepository {
   });
   Future<void> resolveDuplicate(String itemId, String decision);
   Future<void> reapplyCategories(String batchId);
+  Future<String> repeat(String batchId);
   Future<void> confirm(String id);
   Future<void> cancel(String id);
 }
@@ -366,6 +367,14 @@ class SupabaseImportsRepository implements ImportsRepository {
       params: {'p_batch_id': batchId},
     );
   }
+
+  @override
+  Future<String> repeat(String batchId) async =>
+      await client.rpc(
+            'repeat_statement_import',
+            params: {'p_batch_id': batchId},
+          )
+          as String;
 
   @override
   Future<void> resolveDuplicate(String itemId, String decision) async {
