@@ -41,3 +41,10 @@ rows[27] = {k: ('inlineStr', v) for k,v in {'B':'2,00','C':'AMD','F':'- 2,00','O
 files['xl/worksheets/sheet1.xml'] = f'<?xml version="1.0"?><worksheet xmlns="{ns}"><sheetData>'+sheet_rows(rows)+'</sheetData></worksheet>'
 with ZipFile(Path(__file__).with_name('ameria_errors_synthetic.xlsx'),'w',ZIP_DEFLATED) as out:
  for name,content in files.items(): out.writestr(name,content)
+
+# Holds without postings are informational; a row with a debit remains an expense.
+rows[26] = {k: ('inlineStr', v) for k,v in {'A':'07.10.2026','B':'125,00','C':'AMD','J':'07.10.2026','O':'Սառեցում(synthetic hold)'}.items()}
+rows[27] = {k: ('inlineStr', v) for k,v in {'A':'08.10.2026','B':'75,00','C':'AMD','F':'- 75,00','O':'Սառեցում (posted transaction)'}.items()}
+files['xl/worksheets/sheet1.xml'] = f'<?xml version="1.0"?><worksheet xmlns="{ns}"><sheetData>'+sheet_rows(rows)+'</sheetData></worksheet>'
+with ZipFile(Path(__file__).with_name('ameria_holds_synthetic.xlsx'),'w',ZIP_DEFLATED) as out:
+ for name,content in files.items(): out.writestr(name,content)

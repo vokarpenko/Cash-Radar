@@ -9,8 +9,8 @@ begin
     or (select count(*) from vault.decrypted_secrets where name='gmail_service_role')<>1 then
   raise exception 'Expected one gmail_project_url and one gmail_service_role in Vault';
  end if;
- if (select decrypted_secret from vault.decrypted_secrets where name='gmail_service_role') !~ '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$' then
-  raise exception 'Expected legacy JWT service role key';
+ if (select decrypted_secret from vault.decrypted_secrets where name='gmail_service_role') !~ '^(sb_secret_[A-Za-z0-9_-]+|[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$' then
+  raise exception 'Expected a secret API key or legacy JWT service role key';
  end if;
  if (select decrypted_secret from vault.decrypted_secrets where name='gmail_project_url') !~ '^https://[a-z0-9]+\.supabase\.co$' then
   raise exception 'Invalid Supabase project URL';

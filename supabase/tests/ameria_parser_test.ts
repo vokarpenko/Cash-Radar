@@ -55,3 +55,14 @@ Deno.test("unknown unposted rows and rows without dates are reported", async () 
   equal(result.items.length, 3);
   equal(result.errors.map((e) => e.row), [26, 27]);
 });
+
+Deno.test("Ameria skips unposted holds and releases but keeps posted debits", async () => {
+  const bytes = await Deno.readFile(
+    new URL("./fixtures/ameria_holds_synthetic.xlsx", import.meta.url),
+  );
+  const result = await parseAmeriaXlsx(bytes, "AMD", categories);
+  equal(result.errorCount, 0);
+  equal(result.items.map((item) => item.row_number), [21, 22, 24, 27]);
+  equal(result.items.at(-1)?.transaction_type, "expense");
+  equal(result.items.at(-1)?.account_amount, "75.00");
+});
