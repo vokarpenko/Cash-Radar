@@ -118,11 +118,11 @@ Deno.test("429 on Hydrogen falls back once to Flash and records the actual model
       result.suggestions[0].category === "groceries",
   );
 });
-Deno.test("other errors do not cause a fallback request", async () => {
+Deno.test("authentication errors do not cause a fallback request", async () => {
   let calls = 0;
   const fake = (async () => {
     calls++;
-    return new Response("failure", { status: 503 });
+    return new Response("failure", { status: 401 });
   }) as typeof fetch;
   try {
     await queryGemini("local-test-secret", groups, fake);
@@ -131,6 +131,25 @@ Deno.test("other errors do not cause a fallback request", async () => {
     assert(e instanceof Error && e.message.includes("отклонил"));
   }
   assert(calls === 1);
+});
+Deno.test("temporary failures and timeouts fall back to the next model", async () => {
+  let calls = 0;
+  const fake = (async () => {
+    calls++;
+    if (calls === 1) return new Response("unavailable", { status: 503 });
+    if (calls === 2) throw new Error("timeout");
+    return new Response(
+      JSON.stringify({
+        candidates: [{
+          finishReason: "STOP",
+          content: { parts: [{ text: JSON.stringify(good) }] },
+        }],
+      }),
+      { status: 200 },
+    );
+  }) as typeof fetch;
+  const result = await queryGemini("local-test-secret", groups, fake);
+  assert(calls === 3 && result.model === "gemini-3.6-flash");
 });
 Deno.test("limit on all models stops after four calls", async () => {
   let calls = 0;

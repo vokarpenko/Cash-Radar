@@ -148,7 +148,8 @@ export async function queryGemini(
 ): Promise<{ model: string; suggestions: Suggestion[] }> {
   if (!apiKey) throw new CategorizationError("Ключ Gemini не настроен.");
   const { prompt } = preparePrompt(groups);
-  const request = async (model: string): Promise<Response> => {
+  const deadline = Date.now() + 70000;
+  const request = async (model: string): Promise<Response | undefined> => {
     try {
       return await fetcher(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -158,7 +159,9 @@ export async function queryGemini(
             "Content-Type": "application/json",
             "x-goog-api-key": apiKey,
           },
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(
+            Math.max(1, Math.min(15000, deadline - Date.now())),
+          ),
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: {
@@ -173,19 +176,19 @@ export async function queryGemini(
         },
       );
     } catch {
-      throw new CategorizationError(
-        "Gemini недоступен или превысил время ожидания.",
-      );
+      return undefined;
     }
   };
   let model: string = PRIMARY_MODEL;
   let response: Response | undefined;
+  let unavailable = false;
   for (const candidate of MODELS) {
+    if (Date.now() >= deadline) break;
     let wait = await gate.claim(candidate);
     if (wait < 0) continue;
     let attempts = 0;
     while (wait > 0 && attempts++ < 3) {
-      if (wait > 15000) {
+      if (wait > 15000 || wait >= deadline - Date.now()) {
         throw new CategorizationError(
           "Слишком много запросов. Повторите позже.",
         );
@@ -199,6 +202,11 @@ export async function queryGemini(
     }
     model = candidate;
     response = await request(model);
+    if (!response || response.status >= 500) {
+      unavailable = true;
+      response = undefined;
+      continue;
+    }
     if (response.status === 429) {
       await gate.limited(model);
       response = undefined;
@@ -208,7 +216,9 @@ export async function queryGemini(
   }
   if (!response) {
     throw new CategorizationError(
-      "Лимит всех моделей Gemini исчерпан. Повторите позже.",
+      unavailable
+        ? "Gemini недоступен или превысил время ожидания. Повторите позже."
+        : "Лимит всех моделей Gemini исчерпан. Повторите позже.",
     );
   }
   if (!response.ok) {
