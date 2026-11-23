@@ -65,3 +65,25 @@ unset CASHRADAR_LOCAL_SERVICE_KEY
 4. Проверьте состояние в разделе импорта и журнал Edge Function. В логах только коды ошибок и счётчики, без содержимого сообщений и токенов.
 
 При ошибке OAuth переподключите аккаунт и обновите `GMAIL_REFRESH_TOKEN` в секретах соответствующего окружения. При отключении интеграции остановите Cron, отзовите доступ приложения в Google Account → Security → Third-party access и удалите Gmail-секреты из Supabase; письма не удаляются.
+
+### Приостановить и возобновить опрос Gmail
+
+В SQL Editor нужного проекта можно отключить расписание, сохранив саму задачу:
+
+```sql
+select cron.alter_job(
+  job_id := (select jobid from cron.job where jobname = 'cash-radar-gmail-collector'),
+  active := false
+);
+```
+
+Чтобы включить его снова, выполните:
+
+```sql
+select cron.alter_job(
+  job_id := (select jobid from cron.job where jobname = 'cash-radar-gmail-collector'),
+  active := true
+);
+```
+
+Пауза не прерывает уже запущенный сбор. Перед очисткой истории дождитесь завершения текущего запуска. После возобновления следующее выполнение произойдёт по расписанию, каждые 15 минут.
