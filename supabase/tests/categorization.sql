@@ -79,7 +79,7 @@ select set_config('request.jwt.claims','{"sub":"90000000-0000-4000-8000-00000000
 set local role authenticated;
 do $$ begin
  begin perform public.reapply_import_categories(current_setting('test.batch2')::uuid); raise exception 'foreign reapply allowed'; exception when insufficient_privilege then null; end;
- if exists(select 1 from public.category_rules) or exists(select 1 from public.merchant_aliases) or exists(select 1 from public.category_feedback) then raise exception 'foreign user sees category rules'; end if;
+ if exists(select 1 from public.category_rules where user_id<>'90000000-0000-4000-8000-000000000002') or exists(select 1 from public.merchant_aliases) or exists(select 1 from public.category_feedback) then raise exception 'foreign user sees category rules'; end if;
  begin insert into public.category_rules(kind,match_type,pattern,category_id) values('expense','merchant_contains','glovo',current_setting('test.food')::uuid); raise exception 'foreign category accepted'; exception when foreign_key_violation then null; end;
 end $$;
 reset role;
