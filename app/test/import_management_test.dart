@@ -123,6 +123,12 @@ class MemoryImports implements ImportsRepository {
   Future<void> reapplyCategories(String batchId) async {}
 
   @override
+  Future<String> repeat(String batchId) async {
+    status = 'ready';
+    return batchId;
+  }
+
+  @override
   Future<void> resolveDuplicate(String itemId, String decision) async {
     reviewDecision = decision == 'clear' ? null : decision;
   }
@@ -328,6 +334,28 @@ void main() {
     await open(tester);
     await prepare(tester);
     expect(find.text('Ameria XLSX'), findsOneWidget);
+  });
+  testWidgets('prepares a completed statement again after confirmation', (
+    tester,
+  ) async {
+    imports.status = 'completed';
+    await open(tester);
+    await prepare(tester);
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Подготовить повторно')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Подготовить повторно'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Подготовить повторно'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Готов к подтверждению'), findsWidgets);
+    expect(find.text('Подтвердить импорт'), findsOneWidget);
   });
   testWidgets('shows invalid rows and prevents partial confirmation', (
     tester,

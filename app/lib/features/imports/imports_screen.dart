@@ -173,6 +173,63 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
     }
   }
 
+  Future<void> _repeatImport(ImportBatch batch) async {
+    final owner = _navigation.userId;
+    final version = _sessionVersion;
+    if (owner == null || _busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Подготовить выписку повторно?'),
+        content: const Text(
+          'Создадим новый предпросмотр из сохранённой выписки. Существующие операции останутся на месте, возможные совпадения нужно будет проверить перед подтверждением.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Подготовить повторно'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true ||
+        !mounted ||
+        _sessionVersion != version ||
+        _navigation.userId != owner) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final id = await ref.read(importsRepositoryProvider).repeat(batch.id);
+      if (!mounted ||
+          _sessionVersion != version ||
+          _navigation.userId != owner) {
+        return;
+      }
+      ref.invalidate(importBatchesProvider);
+      ref.invalidate(importDetailProvider(id));
+      setState(() => _selectedBatch = id);
+    } catch (_) {
+      if (mounted &&
+          _sessionVersion == version &&
+          _navigation.userId == owner) {
+        setState(
+          () => _error =
+              'Не удалось подготовить повторный импорт. Проверьте счёт и попробуйте снова.',
+        );
+      }
+    } finally {
+      if (mounted && _sessionVersion == version) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _resolve(ImportRow row, String decision, String batchId) async {
     final version = _sessionVersion;
     final owner = _navigation.userId;
@@ -290,6 +347,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
     'ready' => 'Готов к подтверждению',
     'invalid' => 'Ошибки в файле',
     'completed' => 'Импортирован',
+    'superseded' => 'Импортирован · подготовлен повторно',
     'cancelled' => 'Отменён',
     _ => 'Неизвестный статус',
   };
@@ -865,6 +923,12 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (batch.status == 'completed')
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _repeatImport(batch),
+                        icon: const Icon(Icons.replay),
+                        label: const Text('Подготовить повторно'),
+                      ),
                     if (batch.status == 'ready' &&
                         batch.format != 'cashradar_csv_v1')
                       TextButton(
