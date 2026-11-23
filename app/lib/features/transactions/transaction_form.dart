@@ -196,6 +196,7 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                           _categoryId = null;
                         }),
                 ),
+                const SizedBox(height: 20),
                 accounts.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(12),
@@ -239,13 +240,7 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                           }),
                   ),
                 ),
-                if (widget.transaction != null)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      'При изменении категории выбор запомнится для такого же названия, если оно достаточно длинное. Управление — в настройках.',
-                    ),
-                  ),
+                const SizedBox(height: 20),
                 categories.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(12),
@@ -280,6 +275,17 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                         : (v) => setState(() => _categoryId = v),
                   ),
                 ),
+                if (widget.transaction != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Изменение категории может запомниться для операций с таким же названием. Управление — в настройках.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
                 DropdownButtonFormField<String>(
                   borderRadius: BorderRadius.circular(16),
                   dropdownColor: Theme.of(context).colorScheme.surface,
@@ -301,6 +307,7 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                       ? null
                       : (v) => setState(() => _currency = v),
                 ),
+                const SizedBox(height: 20),
                 TextFormField(
                   controller: _amount,
                   enabled: !_saving,
@@ -317,7 +324,8 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                 ),
                 if (account != null &&
                     _currency != null &&
-                    _currency != account.currency)
+                    _currency != account.currency) ...[
+                  const SizedBox(height: 20),
                   TextFormField(
                     controller: _accountAmount,
                     enabled: !_saving,
@@ -332,14 +340,19 @@ class _TransactionFormState extends ConsumerState<TransactionForm> {
                     ),
                     validator: _validateAmount,
                   ),
+                ],
+                const SizedBox(height: 20),
                 TextFormField(
                   controller: _description,
                   enabled: !_saving,
                   maxLength: 500,
+                  minLines: 2,
+                  maxLines: 4,
                   decoration: const InputDecoration(
                     labelText: 'Описание (необязательно)',
                   ),
                 ),
+                const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
