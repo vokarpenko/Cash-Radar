@@ -1,6 +1,5 @@
 import {
   type Group,
-  isEligiblePublicName,
   preparePrompt,
   queryGemini,
   validateResults,
@@ -33,15 +32,15 @@ Deno.test("only reviewed names and no local IDs in prompt", () => {
   assert(p.includes("Imaginary Grocer"));
   assert(!p.includes("private-group-id"));
   for (
-    const s of [
-      "name@example.com",
-      "visa 1234",
-      "123456789",
-      "https://example.com",
-      "example.com",
-      "A\nB",
+    const merchant of [
+      "VIVA Payment: 12345678 / reference",
+      "Ք: 88 42 SUPERMARKET Yerevan AM 10",
+      "A long description ".repeat(8),
     ]
-  ) assert(!isEligiblePublicName(s), s);
+  ) {
+    const input = preparePrompt([{ ...groups[0], merchant }]);
+    assert(input.inputs[0].merchant === merchant.trim());
+  }
   fail(() => preparePrompt([...groups, ...groups]));
 });
 Deno.test("strict results reject invalid, unrelated or contradictory output", () => {

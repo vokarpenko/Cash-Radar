@@ -119,13 +119,11 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
     final rows = _candidates;
     return ExpansionTile(
       title: const Text('Категоризация с Gemini'),
-      subtitle: const Text(
-        'Проверьте отмеченные публичные названия перед отправкой',
-      ),
+      subtitle: const Text('Проверьте описания операций перед отправкой'),
       childrenPadding: const EdgeInsets.symmetric(horizontal: 12),
       children: [
         const Text(
-          'Названия отмечены заранее — снимите отметки с личных и непубличных данных. Нажатие кнопки отправит отмеченное в Google. Google получит только выбранные названия и тип операции. На бесплатном тарифе Google может использовать запросы для улучшения сервисов; название может раскрывать сведения о покупке. Не выбирайте личные данные или номера.',
+          'Выбранные описания и тип операции будут отправлены в Google целиком, включая номера и личные данные, если они есть в описании. На бесплатном тарифе Google может использовать запросы для улучшения сервисов. Снимите отметки с описаний, которые не хотите отправлять.',
         ),
         if (widget.completed)
           const Text(
@@ -134,11 +132,7 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
         if (rows == null && _error == null) const CircularProgressIndicator(),
         if (rows != null && rows.isEmpty)
           const Text('Неизвестных названий для проверки нет.'),
-        if (rows != null &&
-            rows
-                    .where((c) => isEligibleAiName(c['merchant'] as String))
-                    .length >
-                25)
+        if (rows != null && rows.length > 25)
           const Text(
             'За один запрос можно отправить до 25 названий; остальные будут доступны следующим пакетом.',
           ),
@@ -149,9 +143,9 @@ class _AiImportPanelState extends ConsumerState<AiImportPanel> {
               value: _selected.contains(c['group_id']),
               title: Text(c['merchant'] as String),
               subtitle: Text(
-                '${c['kind'] == 'income' ? 'Доход' : 'Расход'} · операций: ${c['item_count']}${isEligibleAiName(c['merchant'] as String) ? '' : ' · нельзя отправить автоматически'}',
+                '${c['kind'] == 'income' ? 'Доход' : 'Расход'} · операций: ${c['item_count']}',
               ),
-              onChanged: _busy || !isEligibleAiName(c['merchant'] as String)
+              onChanged: _busy
                   ? null
                   : (value) => setState(() {
                       if (value == true && _selected.length < 25) {
