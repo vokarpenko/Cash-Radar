@@ -10,6 +10,8 @@
 
 ## 1. Подготовка Google
 
+Текущий production для личного использования настроен через [Personal mode](https://support.google.com/cloud/answer/15544987): OAuth-приложение создано от имени выделенного Gmail, в проекте включён Gmail API, клиент имеет тип Desktop app. Семидневное ограничение Testing в этом режиме не применяется, но Google может отозвать токен по другим причинам. Существующий External-проект нельзя переключить в Personal mode; для него нужен отдельный проект. Шаги ниже описывают альтернативную настройку External + Testing.
+
 1. Создайте или выберите проект в Google Cloud Console и включите Gmail API.
 2. Google Auth Platform → Branding: создайте приложение. Выберите External и статус Testing.
 3. Audience → Test users: добавьте отдельный Gmail. В Data Access добавьте `https://www.googleapis.com/auth/gmail.modify`.

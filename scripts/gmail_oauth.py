@@ -79,6 +79,9 @@ try:
     request = urllib.request.Request('https://gmail.googleapis.com/gmail/v1/users/me/labels',headers={'Authorization':'Bearer '+access})
     with urllib.request.urlopen(request,timeout=15) as response:
         labels = json.load(response).get('labels', [])
+except urllib.error.HTTPError as error:
+    # Google may include request details in its response; report only the status.
+    raise SystemExit(f'Google authorization failed (HTTP {error.code}); no credentials saved. Check that Gmail API is enabled for the OAuth client project.')
 except (urllib.error.URLError, KeyError, ValueError):
     raise SystemExit('Google authorization failed; no credentials saved. Check client settings and try again.')
 if not isinstance(refresh,str) or not refresh or any(c in refresh for c in '\n\r="\''):
