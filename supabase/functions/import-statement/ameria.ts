@@ -113,10 +113,10 @@ export async function parseAmeriaXlsx(
     const currency = (cells.C ?? "").trim().toUpperCase(),
       amount = money(cells.B ?? "", "");
     const hasCredit = !!cells.D?.trim(), hasDebit = !!cells.F?.trim();
-    // Ameria's release of a card hold has no posting and must not change the ledger.
+    // A hold or release without a posting is informational, not a transaction.
     if (
       !hasCredit && !hasDebit &&
-      /^Ապասառեցում(?=$|[\s(:])/iu.test((cells.O ?? "").trim())
+      /^(?:Սառեցում|Ապասառեցում)(?=$|[\s(:])/iu.test((cells.O ?? "").trim())
     ) continue;
     const type = hasCredit ? "income" : "expense";
     const accountAmount = hasCredit === hasDebit
