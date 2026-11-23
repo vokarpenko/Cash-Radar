@@ -160,7 +160,7 @@ export async function queryGemini(
             "x-goog-api-key": apiKey,
           },
           signal: AbortSignal.timeout(
-            Math.max(1, Math.min(15000, deadline - Date.now())),
+            Math.max(1, Math.min(10000, deadline - Date.now())),
           ),
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
