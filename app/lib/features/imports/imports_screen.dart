@@ -393,35 +393,20 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Поддерживаются CashRadar CSV, Ameria XLSX, ACBA XLSX и Альфа-Банк XLSX: до 1 МиБ и 500 операций. Категории банковских операций — «Прочие доходы» и «Прочие расходы». Снятие блокировки без проводки не создаёт операцию. Проверяйте пересечения с уже внесёнными операциями.',
+                Text(
+                  'Выберите счёт и загрузите выписку, чтобы проверить операции перед импортом.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                if (_file?.isEncryptedOffice == true)
-                  TextField(
-                    controller: _password,
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    maxLength: 255,
-                    decoration: const InputDecoration(
-                      labelText: 'Пароль от файла ACBA',
-                      helperText:
-                          'Пароль используется только для этой загрузки и не сохраняется.',
-                    ),
+                Text(
+                  'Ameria, ACBA, Альфа-Банк · XLSX или CashRadar CSV · до 1 МиБ и 500 операций',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                const SelectableText(
-                  'date,type,amount,currency,account_amount,category,description',
-                  style: TextStyle(fontSize: 12),
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Дата — ГГГГ-ММ-ДД, тип — income или expense, категория должна совпадать с вашей категорией. Суммы указывайте с точкой и не более чем двумя знаками после неё. Для другой валюты обязательно заполните account_amount.',
-                ),
-                const SelectableText(
-                  '2026-11-11,expense,12.34,AMD,,Продукты,Покупка',
-                  style: TextStyle(fontSize: 12),
-                ),
+                const SizedBox(height: 20),
                 accounts.when(
                   skipLoadingOnRefresh: false,
                   skipLoadingOnReload: false,
@@ -488,6 +473,43 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                           ? null
                           : _prepare,
                       child: Text(_busy ? 'Обработка…' : 'Подготовить импорт'),
+                    ),
+                  ],
+                ),
+                if (_file?.isEncryptedOffice == true) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    maxLength: 255,
+                    decoration: const InputDecoration(
+                      labelText: 'Пароль от файла ACBA',
+                      helperText:
+                          'Пароль используется только для этой загрузки и не сохраняется.',
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                const ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.only(bottom: 8),
+                  title: Text('Формат CSV и особенности импорта'),
+                  children: [
+                    Text(
+                      'Банковские операции без категории относятся к прочим доходам или расходам. Блокировки без проводки не создают операцию.',
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Для CSV укажите дату в формате ГГГГ-ММ-ДД, тип income или expense и существующую категорию. Суммы — с точкой и не более двух знаков после неё. Для другой валюты заполните account_amount.',
+                    ),
+                    SizedBox(height: 8),
+                    SelectableText(
+                      'date,type,amount,currency,account_amount,category,description',
+                    ),
+                    SelectableText(
+                      '2026-11-11,expense,12.34,AMD,,Продукты,Покупка',
                     ),
                   ],
                 ),
@@ -580,26 +602,48 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Предпросмотр: ${batch.filename}',
+                  'Предпросмотр выписки',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '${_status(batch.status)} · формат: ${batch.format == 'ameria_xlsx_v1'
-                      ? 'Ameria XLSX'
-                      : batch.format == 'acba_xlsx_v1'
-                      ? 'ACBA XLSX'
-                      : batch.format == 'alfa_xlsx_v1'
-                      ? 'Альфа-Банк XLSX'
-                      : 'CashRadar CSV'} · валюта счёта: ${batch.accountCurrency}',
+                const SizedBox(height: 6),
+                SelectableText(
+                  batch.filename,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                Text(
-                  account == null
-                      ? 'Счёт недоступен.'
-                      : 'Счёт: ${account.name} · ${account.bankName ?? 'кошелёк'}',
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _ImportTag(
+                      label: _status(batch.status),
+                      icon: Icons.fact_check_outlined,
+                    ),
+                    _ImportTag(
+                      label: account == null
+                          ? 'Счёт недоступен'
+                          : '${account.name} · ${batch.accountCurrency}',
+                      icon: Icons.account_balance_wallet_outlined,
+                    ),
+                    if (batch.periodStart != null && batch.periodEnd != null)
+                      _ImportTag(
+                        label: '${batch.periodStart} — ${batch.periodEnd}',
+                        icon: Icons.date_range_outlined,
+                      ),
+                    _ImportTag(
+                      label: switch (batch.format) {
+                        'ameria_xlsx_v1' => 'Ameria XLSX',
+                        'acba_xlsx_v1' => 'ACBA XLSX',
+                        'alfa_xlsx_v1' => 'Альфа-Банк XLSX',
+                        _ => 'CashRadar CSV',
+                      },
+                      icon: Icons.description_outlined,
+                    ),
+                  ],
                 ),
-                if (batch.periodStart != null && batch.periodEnd != null)
-                  Text('Период: ${batch.periodStart} — ${batch.periodEnd}'),
+                const SizedBox(height: 16),
                 if (batch.status == 'ready' && !accountAvailable)
                   const Text(
                     'Подтверждение недоступно: счёт архивирован, недоступен или его валюта изменилась.',
@@ -608,9 +652,27 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                   const Text(
                     'Для подтверждения проверьте решения по возможным совпадениям.',
                   ),
-                Text(
-                  'Корректных строк: ${batch.rowCount} · ошибок: ${batch.errorCount} · импортировано: ${batch.importedCount} · пропущено: ${batch.duplicateCount}',
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _ImportMetric(label: 'Строк', value: '${batch.rowCount}'),
+                    _ImportMetric(
+                      label: 'Ошибок',
+                      value: '${batch.errorCount}',
+                      isError: batch.errorCount > 0,
+                    ),
+                    _ImportMetric(
+                      label: 'Импортировано',
+                      value: '${batch.importedCount}',
+                    ),
+                    _ImportMetric(
+                      label: 'Пропущено',
+                      value: '${batch.duplicateCount}',
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 16),
                 if (batch.format == 'alfa_xlsx_v1')
                   const Text(
                     'Показана сумма по счёту. Сумма и валюта покупки в этой выписке отдельно не указаны.',
@@ -644,20 +706,83 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                     batchId: batch.id,
                     completed: batch.status == 'completed',
                   ),
+                if (data.rows.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Операции',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 for (final row in data.rows)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: row.needsReview
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.error.withValues(alpha: 0.45)
+                            : Theme.of(context).colorScheme.outlineVariant
+                                  .withValues(alpha: 0.6),
+                      ),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              '${row.type == 'income' ? '+' : '−'}${Money.formatStored(row.amount)} ${row.currency}',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: row.type == 'income'
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                  ),
+                            ),
+                            _ImportTag(
+                              label: row.category,
+                              icon: Icons.sell_outlined,
+                            ),
+                            Text(
+                              row.date,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
                         Text(
                           row.description?.isNotEmpty == true
                               ? row.description!
                               : (row.type == 'income' ? 'Доход' : 'Расход'),
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
+                        const SizedBox(height: 6),
                         Text(
-                          'Строка ${row.rowNumber} · ${row.date} · ${row.category}',
+                          'Строка ${row.rowNumber}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                         if (row.postingDate != null)
                           Text(
@@ -677,9 +802,7 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
                               _ => 'вручную',
                             }}',
                           ),
-                        Text(
-                          '${row.type == 'income' ? '+' : '−'}${Money.formatStored(row.amount)} ${row.currency}',
-                        ),
+
                         if (batch.status == 'ready' &&
                             (row.candidates.isNotEmpty ||
                                 row.duplicateDecision != null)) ...[
@@ -787,6 +910,82 @@ class _ImportsScreenState extends ConsumerState<ImportsScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _ImportTag extends StatelessWidget {
+  const _ImportTag({required this.label, required this.icon});
+
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: colors.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(label, style: Theme.of(context).textTheme.labelMedium),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImportMetric extends StatelessWidget {
+  const _ImportMetric({
+    required this.label,
+    required this.value,
+    this.isError = false,
+  });
+
+  final String label;
+  final String value;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      constraints: const BoxConstraints(minWidth: 112),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: isError
+            ? theme.colorScheme.errorContainer
+            : theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isError ? theme.colorScheme.onErrorContainer : null,
+            ),
+          ),
+        ],
       ),
     );
   }
